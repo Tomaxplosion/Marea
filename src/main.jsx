@@ -26,6 +26,7 @@ const defaultTasks = [
   { id: 3, text: 'Leer un capítulo', done: true }
 ];
 
+const MAX_DURATION_MINUTES = 8 * 60;
 const TRACK_DATABASE = 'marea-audio-library';
 const TRACK_STORE = 'tracks';
 
@@ -74,6 +75,21 @@ function formatPlaybackTime(seconds) {
   return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
 }
 
+function formatTimerTime(totalSeconds) {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor(safeSeconds % 3600 / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours === 0 && minutes === 0) return `${seconds} s`;
+  if (hours === 0) return `${minutes}:${String(seconds).padStart(2, '0')}`;
+
+  const parts = [`${hours} h`];
+  if (minutes > 0) parts.push(`${minutes} min`);
+  if (seconds > 0) parts.push(`${seconds} s`);
+  return parts.join(' ');
+}
+
 function readTasks() {
   try {
     const saved = JSON.parse(localStorage.getItem('marea-tasks'));
@@ -91,7 +107,7 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(() => {
     const saved = Number(localStorage.getItem('marea-duration'));
-    return Number.isInteger(saved) && saved >= 1 && saved <= 180 ? saved : 25;
+    return Number.isInteger(saved) && saved >= 1 && saved <= MAX_DURATION_MINUTES ? saved : 25;
   });
   const [seconds, setSeconds] = useState(durationMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
@@ -155,7 +171,7 @@ function App() {
   const completedCount = tasks.filter((task) => task.done).length;
   const remainingTasks = tasks.length - completedCount;
   const currentTrack = library[selectedTrack];
-  const time = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+  const time = formatTimerTime(seconds);
   const progress = trackDuration > 0 ? currentTime / trackDuration * 100 : 0;
   const today = new Intl.DateTimeFormat('es-ES', {
     weekday: 'long',
@@ -163,10 +179,16 @@ function App() {
     month: 'long'
   }).format(new Date());
 
-  function changeDuration(event) {
-    const value = Number(event.target.value);
+  function changeDurationPart(part, rawValue) {
+    const value = Number(rawValue);
     if (!Number.isFinite(value)) return;
-    const nextDuration = Math.min(180, Math.max(1, Math.floor(value)));
+    const hours = part === 'hours'
+      ? Math.min(8, Math.max(0, Math.floor(value)))
+      : Math.floor(durationMinutes / 60);
+    const minutes = part === 'minutes'
+      ? Math.min(59, Math.max(0, Math.floor(value)))
+      : durationMinutes % 60;
+    const nextDuration = Math.min(MAX_DURATION_MINUTES, Math.max(1, hours * 60 + minutes));
     setDurationMinutes(nextDuration);
     setSeconds(nextDuration * 60);
     setIsRunning(false);
@@ -325,7 +347,7 @@ function App() {
               <div className="timer-ring" aria-label={`Quedan ${time}`}>
                 <div className="timer-ring-inner">
                   <span className="timer-caption">TIEMPO RESTANTE</span>
-                  <span className="timer-time">{time}</span>
+                  <span className={`timer-time${time.length > 10 ? ' timer-time-compact' : ''}`}>{time}</span>
                   <span className="timer-hint">{isRunning ? 'en marcha' : 'listo'}</span>
                 </div>
               </div>
@@ -338,12 +360,18 @@ function App() {
             </div>
 
             <div className="timer-settings">
-              <label htmlFor="duration-minutes">Duración</label>
-              <div className="duration-input-wrap">
-                <input id="duration-minutes" type="number" min="1" max="180" step="1" value={durationMinutes} onChange={changeDuration} aria-label="Duración del temporizador en minutos" />
-                <span>min</span>
+              <span className="duration-label">Duración</span>
+              <div className="timer-duration-fields">
+                <div className="duration-input-wrap">
+                  <input id="duration-hours" type="number" min="0" max="8" step="1" value={Math.floor(durationMinutes / 60)} onChange={(event) => changeDurationPart('hours', event.target.value)} aria-label="Horas del temporizador" />
+                  <span>h</span>
+                </div>
+                <div className="duration-input-wrap">
+                  <input id="duration-minutes" type="number" min="0" max="59" step="1" value={durationMinutes % 60} onChange={(event) => changeDurationPart('minutes', event.target.value)} aria-label="Minutos del temporizador" />
+                  <span>min</span>
+                </div>
               </div>
-              <span className="duration-hint">1–180 min</span>
+              <span className="duration-hint">Máximo 8 h</span>
             </div>
             <span className="focus-decoration" aria-hidden="true">✳</span>
           </section>
