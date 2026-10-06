@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   Headphones,
   ListTodo,
+  Moon,
   Music2,
   Pause,
   Play,
@@ -13,6 +14,7 @@ import {
   RotateCcw,
   SkipBack,
   SkipForward,
+  Sun,
   Waves,
   X
 } from 'lucide-react';
@@ -85,6 +87,7 @@ function App() {
   const [tasks, setTasks] = useState(readTasks);
   const [draft, setDraft] = useState('');
   const [view, setView] = useState('space');
+  const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(() => {
     const saved = Number(localStorage.getItem('marea-duration'));
@@ -112,6 +115,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('marea-duration', String(durationMinutes));
   }, [durationMinutes]);
+
+  useEffect(() => {
+    localStorage.setItem('marea-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     let active = true;
@@ -268,7 +275,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-theme={theme}>
       <aside className="sidebar">
         <a className="brand" href="#inicio" aria-label="Marea, inicio">
           <span className="brand-mark"><Waves size={20} strokeWidth={2.1} /></span>
@@ -281,26 +288,27 @@ function App() {
           <button className={`nav-item${view === 'radio' ? ' active' : ''}`} onClick={() => setView('radio')}><span className="nav-icon"><Music2 size={17} /></span>Música</button>
         </nav>
 
-        <div className="sidebar-note">
-          <div className="note-sun">✳</div>
-          <p>Hazle sitio<br />a la calma.</p>
-          <span>Un momento a la vez.</span>
-        </div>
-        <div className="sidebar-footer"><span className="status-dot" />Tu rincón tranquilo</div>
+        <section className="settings-section" aria-label="Ajustes">
+          <div className="side-label">AJUSTES</div>
+          <label className="theme-setting">
+            <span className="theme-setting-icon">{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
+            <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{theme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
+            <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
+            <span className="theme-switch" aria-hidden="true"><span /></span>
+          </label>
+        </section>
       </aside>
 
       <main className="main-content" id="inicio">
         <header className="topbar">
           <div className="date-label"><span className="date-dot" />{today}</div>
-          <div className="topbar-tag">UN DÍA A LA VEZ <span>✳</span></div>
         </header>
 
         {view === 'space' ? (
           <>
             <section className="welcome" aria-labelledby="welcome-title">
               <div className="eyebrow"><span className="eyebrow-line" />TU ESPACIO DE ESTUDIO</div>
-              <h1 id="welcome-title">Ve a tu <em>ritmo.</em></h1>
-              <p>Un poco de calma para todo lo que tienes por hacer.</p>
+              <h1 id="welcome-title">Tu <em>espacio.</em></h1>
             </section>
 
             <div className="dashboard-grid">
@@ -308,7 +316,7 @@ function App() {
             <div className="focus-topline">
               <div className="focus-heading">
                 <span className="focus-icon"><Headphones size={16} /></span>
-                <div><h2 id="focus-title">Pomodoro</h2><span>Un bloque a tu medida</span></div>
+                <div><h2 id="focus-title">Pomodoro</h2></div>
               </div>
               <button className="icon-button focus-reset" onClick={() => { setIsRunning(false); setSeconds(durationMinutes * 60); }} title="Reiniciar temporizador" aria-label="Reiniciar temporizador"><RotateCcw size={16} /></button>
             </div>
@@ -318,7 +326,7 @@ function App() {
                 <div className="timer-ring-inner">
                   <span className="timer-caption">TIEMPO RESTANTE</span>
                   <span className="timer-time">{time}</span>
-                  <span className="timer-hint">{isRunning ? 'vas muy bien' : 'a tu propio ritmo'}</span>
+                  <span className="timer-hint">{isRunning ? 'en marcha' : 'listo'}</span>
                 </div>
               </div>
               <div className="timer-controls">
@@ -343,7 +351,6 @@ function App() {
           <section className="tasks-panel" id="tareas" aria-labelledby="tasks-title">
             <div className="tasks-header">
               <div>
-                <div className="eyebrow tasks-eyebrow">PASO A PASO</div>
                 <h2 id="tasks-title">Mi lista <span className="task-count">{remainingTasks}</span></h2>
               </div>
               <span className="tasks-flower" aria-hidden="true">✳</span>
@@ -356,7 +363,7 @@ function App() {
 
             <div className="task-list">
               {tasks.length === 0 ? (
-                <p className="empty-tasks">Tu lista está despejada. ¿Qué te gustaría hacer?</p>
+                <p className="empty-tasks">No hay tareas.</p>
               ) : tasks.map((task) => (
                 <div className={`task-row${task.done ? ' is-done' : ''}`} key={task.id}>
                   <button className="task-check" aria-label={task.done ? `Marcar ${task.text} como pendiente` : `Completar ${task.text}`} onClick={() => setTasks((current) => current.map((item) => item.id === task.id ? { ...item, done: !item.done } : item))}>
@@ -375,15 +382,13 @@ function App() {
           </section>
             </div>
 
-            <div className="lower-note"><span className="lower-note-star">✳</span><span>Respira hondo. Lo estás haciendo bien.</span><span className="lower-note-rule" /></div>
           </>
         ) : (
           <section className="radio-view" aria-labelledby="radio-title">
             <div className="radio-heading">
               <div>
                 <div className="eyebrow"><span className="eyebrow-line" />TU BIBLIOTECA</div>
-                <h1 id="radio-title">Música a tu <em>ritmo.</em></h1>
-                <p>Elige una canción y acompaña tu momento.</p>
+                <h1 id="radio-title">Tu <em>música.</em></h1>
               </div>
               <div className="library-actions">
                 <input ref={fileInputRef} className="audio-file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" multiple onChange={importTracks} aria-label="Añadir archivos de audio" />
@@ -396,7 +401,7 @@ function App() {
               <section className="now-playing-panel" aria-label="Reproductor de música">
                 <div className="now-playing-top"><span className="live-indicator"><span /> {isPlaying ? 'REPRODUCIENDO' : 'TU BIBLIOTECA'}</span><Music2 size={17} /></div>
                 <div className="radio-record"><span className="record-disc"><span /></span></div>
-                <div className="now-playing-station">{currentTrack ? currentTrack.artist : 'MÚSICA LOCAL'} <span>·</span> {currentTrack ? 'Tu biblioteca' : 'Tu rincón de música'}</div>
+                <div className="now-playing-station">{currentTrack ? currentTrack.artist : 'MÚSICA LOCAL'} <span>·</span> {currentTrack ? 'Tu biblioteca' : 'Biblioteca'}</div>
                 <h2>{currentTrack?.title ?? (libraryStatus === 'loading' ? 'Cargando tu música…' : 'Aún no hay canciones')}</h2>
                 <p className="now-playing-artist">{currentTrack ? currentTrack.artist : 'Añade archivos de audio para empezar'}</p>
                 {libraryError && <p className="library-error" role="status">{libraryError}</p>}

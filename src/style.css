@@ -352,3 +352,114 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .volume-slider { display: none; }
   .volume-control { display: none; }
 }
+
+  .settings-section { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); }
+  .settings-section .side-label { margin-bottom: 10px; }
+  .theme-setting { position: relative; display: flex; min-height: 48px; align-items: center; gap: 9px; padding: 0 9px; border-radius: 5px; color: #687168; cursor: pointer; transition: background .16s ease, color .16s ease; }
+  .theme-setting:hover { color: #315847; background: #eeefe8; }
+  .theme-setting:focus-within { outline: 2px solid #d77f63; outline-offset: 2px; }
+  .theme-setting-icon { display: grid; width: 20px; place-items: center; color: #ca8066; }
+  .theme-setting-copy { display: grid; flex: 1; gap: 3px; }
+  .theme-setting-copy strong { color: inherit; font-size: 11px; font-weight: 600; }
+  .theme-setting-copy small { color: #97998f; font-size: 9px; }
+  .theme-checkbox { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+  .theme-switch { display: flex; width: 32px; height: 18px; flex: none; align-items: center; padding: 2px; border-radius: 10px; background: #d5d8cf; transition: background .18s ease; }
+  .theme-switch > span { width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .16); transition: transform .18s ease; }
+  .theme-checkbox:checked + .theme-switch { background: #719174; }
+  .theme-checkbox:checked + .theme-switch > span { transform: translateX(14px); }
+
+  .app-shell[data-theme='dark'] {
+    --ink: #e5ebe6;
+    --muted: #a7b1a9;
+    --green: #a7c5a8;
+    --coral: #eba287;
+    --line: #37413b;
+    --paper: #171b19;
+    color: #e3e9e4;
+    background-color: #171b19;
+    background-image: radial-gradient(ellipse at 75% 5%, rgba(73, 100, 77, .14), transparent 42%);
+  }
+  .app-shell[data-theme='dark'] .sidebar { border-color: #323b35; background: rgba(27, 32, 29, .97); }
+  .app-shell[data-theme='dark'] .brand { color: #e5ebe6; }
+  .app-shell[data-theme='dark'] .side-label,
+  .app-shell[data-theme='dark'] .eyebrow { color: #a1aaa2; }
+  .app-shell[data-theme='dark'] .nav-item { color: #b3bcb5; }
+  .app-shell[data-theme='dark'] .nav-item:hover { color: #e0e8df; background: #29312c; }
+  .app-shell[data-theme='dark'] .nav-item.active { color: #d5e5d5; background: #2d3a31; }
+  .app-shell[data-theme='dark'] .nav-item.active::before { background: #91b08e; }
+  .app-shell[data-theme='dark'] .settings-section { border-color: #37413b; }
+  .app-shell[data-theme='dark'] .theme-setting { color: #bec7bf; }
+  .app-shell[data-theme='dark'] .theme-setting:hover { color: #e5ebe6; background: #29312c; }
+  .app-shell[data-theme='dark'] .theme-setting-copy small { color: #a1aaa2; }
+  .app-shell[data-theme='dark'] .theme-switch { background: #4b554d; }
+  .app-shell[data-theme='dark'] .theme-checkbox:checked + .theme-switch { background: #86a985; }
+  .app-shell[data-theme='dark'] .topbar { border-color: #353e38; }
+  .app-shell[data-theme='dark'] .date-label { color: #bbc3bc; }
+  .app-shell[data-theme='dark'] .welcome h1,
+  .app-shell[data-theme='dark'] .radio-heading h1 { color: #e6ece7; }
+  .app-shell[data-theme='dark'] .welcome h1 em,
+  .app-shell[data-theme='dark'] .radio-heading h1 em { color: #efa58b; }
+  .app-shell[data-theme='dark'] .welcome > p,
+  .app-shell[data-theme='dark'] .radio-heading p { color: #aab3ab; }
+  .app-shell[data-theme='dark'] .tasks-panel,
+  .app-shell[data-theme='dark'] .track-history-panel { border-color: #37413b; background: #202522; }
+  .app-shell[data-theme='dark'] .tasks-header h2,
+  .app-shell[data-theme='dark'] .track-history-header h2,
+  .app-shell[data-theme='dark'] .track-drawer-header h2 { color: #e3e9e4; }
+  .app-shell[data-theme='dark'] .task-count { color: #d0dfd0; background: #344238; }
+  .app-shell[data-theme='dark'] .task-form { border-color: #424c45; background: #191e1b; }
+  .app-shell[data-theme='dark'] .task-form:focus-within { border-color: #8eaa8b; }
+  .app-shell[data-theme='dark'] .task-form input { color: #e3e9e4; }
+  .app-shell[data-theme='dark'] .task-form input::placeholder { color: #929c94; }
+  .app-shell[data-theme='dark'] .task-form button { color: #a5c2a4; }
+  .app-shell[data-theme='dark'] .task-row { border-color: #363e39; }
+  .app-shell[data-theme='dark'] .task-check { color: #a7b1a9; }
+  .app-shell[data-theme='dark'] .task-row.is-done .task-check { color: #172019; background: #9bb395; }
+  .app-shell[data-theme='dark'] .task-text { color: #d2d9d3; }
+  .app-shell[data-theme='dark'] .task-row.is-done .task-text { color: #929b94; }
+  .app-shell[data-theme='dark'] .task-delete { color: #a8b0a9; }
+  .app-shell[data-theme='dark'] .task-delete:hover { color: #ffc2ad; background: #42302d; }
+  .app-shell[data-theme='dark'] .empty-tasks,
+  .app-shell[data-theme='dark'] .progress-label,
+  .app-shell[data-theme='dark'] .track-message { color: #abb4ac; }
+  .app-shell[data-theme='dark'] .progress-label span:last-child { color: #d0d8d1; }
+  .app-shell[data-theme='dark'] .progress-track { background: #39413b; }
+  .app-shell[data-theme='dark'] .progress-fill { background: #8da88a; }
+  .app-shell[data-theme='dark'] .add-music-button,
+  .app-shell[data-theme='dark'] .empty-library-add { border-color: #414a43; color: #c2d8c1; background: #252c27; }
+  .app-shell[data-theme='dark'] .add-music-button:hover,
+  .app-shell[data-theme='dark'] .empty-library-add:hover { border-color: #71876f; background: #303a32; }
+  .app-shell[data-theme='dark'] .library-count,
+  .app-shell[data-theme='dark'] .history-refresh { color: #aab2ab; }
+  .app-shell[data-theme='dark'] .track-drawer-toggle { border-color: #414b44; color: #c8d8c7; background: rgba(37, 44, 39, .98); }
+  .app-shell[data-theme='dark'] .track-drawer-toggle:hover { color: #ffc0a8; background: #303833; }
+  .app-shell[data-theme='dark'] .track-drawer-panel { border-color: #3b453e; background: rgba(30, 35, 32, .98); }
+  .app-shell[data-theme='dark'] .track-drawer-panel .track-row { border-color: #39413b; }
+  .app-shell[data-theme='dark'] .track-drawer-panel .track-row:hover { background: #2b332e; }
+  .app-shell[data-theme='dark'] .track-drawer-panel .track-row.track-current { background: #2e3c32; }
+  .app-shell[data-theme='dark'] .track-title,
+  .app-shell[data-theme='dark'] .track-current .track-title { color: #e0e7e1; }
+  .app-shell[data-theme='dark'] .track-artist,
+  .app-shell[data-theme='dark'] .track-time,
+  .app-shell[data-theme='dark'] .track-index { color: #a7b0a8; }
+  .app-shell[data-theme='dark'] .track-current .track-time,
+  .app-shell[data-theme='dark'] .track-current .track-index { color: #efa58b; }
+  .app-shell[data-theme='dark'] .add-track-icon { border-color: #414a43; color: #c3d8c2; background: #252c27; }
+  .app-shell[data-theme='dark'] .player-bar { border-color: #333c36; background: rgba(27, 32, 29, .98); }
+  .app-shell[data-theme='dark'] .station-title { color: #e2e8e2; }
+  .app-shell[data-theme='dark'] .station-subtitle { color: #aab2ab; }
+  .app-shell[data-theme='dark'] .player-divider { background: #3b433d; }
+  .app-shell[data-theme='dark'] .player-skip-button { color: #c0c9c1; }
+  .app-shell[data-theme='dark'] .player-skip-button:hover { color: #e4eee3; background: #303a33; }
+  .app-shell[data-theme='dark'] .player-skip-button:disabled { color: #737b74; }
+  .app-shell[data-theme='dark'] .volume-slider { accent-color: #98b594; }
+  .app-shell[data-theme='dark'] .radio-error { border-color: #64453c; color: #ffd1c0; background: #302321; }
+
+  @media (max-width: 760px) {
+    .sidebar { display: grid; height: auto; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 59px auto; align-items: center; gap: 0; }
+    .brand { grid-column: 1; grid-row: 1; }
+    .main-nav { grid-column: 2; grid-row: 1; }
+    .settings-section { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); }
+    .settings-section .side-label { display: block; margin: 0; }
+    .theme-setting { width: min(100%, 220px); min-height: 34px; justify-self: end; }
+  }
