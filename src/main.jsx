@@ -379,9 +379,9 @@ function App() {
           <span>marea<span className="brand-period">.</span></span>
         </a>
 
-        <div className="side-label">TU ESPACIO</div>
+        <div className="side-label">TU OCEANO</div>
         <nav className="main-nav" aria-label="Navegación principal">
-          <button className={`nav-item${view === 'space' ? ' active' : ''}`} onClick={() => setView('space')}><span className="nav-icon"><Waves size={17} /></span>Mi espacio</button>
+          <button className={`nav-item${view === 'space' ? ' active' : ''}`} onClick={() => setView('space')}><span className="nav-icon"><Waves size={17} /></span>Mi oceano</button>
           <button className={`nav-item${view === 'radio' ? ' active' : ''}`} onClick={() => setView('radio')}><span className="nav-icon"><Music2 size={17} /></span>Música</button>
           <button className={`nav-item${view === 'notes' ? ' active' : ''}`} onClick={() => setView('notes')}><span className="nav-icon"><FileText size={17} /></span>Notas</button>
         </nav>
@@ -406,7 +406,7 @@ function App() {
           <>
             <section className="welcome" aria-labelledby="welcome-title">
               <div className="eyebrow"><span className="eyebrow-line" />TU ESPACIO DE ESTUDIO</div>
-              <h1 id="welcome-title">Tu <em>espacio.</em></h1>
+              <h1 id="welcome-title">Mi <em>Oceano.</em></h1>
             </section>
 
             <div className="dashboard-grid">
@@ -511,7 +511,7 @@ function App() {
               <textarea className="notes-textarea" value={noteContent} onChange={(event) => { setNoteContent(event.target.value); setNoteStatus(''); }} placeholder="Escribe aquí…" aria-label="Texto de la nota" />
               <div className="notes-editor-footer">
                 <span className="note-status" role="status">{noteStatus}</span>
-                <button className="save-note-button" onClick={saveNote}><Save size={16} />Guardar nota</button>
+                <button className="save-note-button" onClick={saveNote}><Save size={16} />{noteId ? 'Guardar cambios' : 'Guardar nota'}</button>
               </div>
             </section>
           </section>
@@ -519,8 +519,8 @@ function App() {
           <section className="radio-view" aria-labelledby="radio-title">
             <div className="radio-heading">
               <div>
-                <div className="eyebrow"><span className="eyebrow-line" />TU BIBLIOTECA</div>
-                <h1 id="radio-title">Tu <em>música.</em></h1>
+                <div className="eyebrow"><span className="eyebrow-line" />MI BIBLIOTECA</div>
+                <h1 id="radio-title">Mi <em>música.</em></h1>
               </div>
               <div className="library-actions">
                 <input ref={fileInputRef} className="audio-file-input" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" multiple onChange={importTracks} aria-label="Añadir archivos de audio" />
@@ -558,10 +558,9 @@ function App() {
                 <button className="track-drawer-toggle" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen} aria-label={drawerOpen ? 'Cerrar lista de canciones' : 'Abrir lista de canciones'} title="Lista de canciones">
                   <span>LISTA</span><ChevronLeft size={19} />
                 </button>
-                {drawerOpen && (
                   <section className="track-drawer-panel" aria-labelledby="library-title" onMouseLeave={() => setDrawerOpen(false)}>
                     <div className="track-drawer-header">
-                      <div><div className="eyebrow">TU MÚSICA</div><h2 id="library-title">Lista de canciones</h2></div>
+                      <div><div className="eyebrow">MI MÚSICA</div><h2 id="library-title">Lista de canciones</h2></div>
                       <button className="add-track-icon" onClick={() => fileInputRef.current?.click()} aria-label="Añadir canciones"><Plus size={17} /></button>
                     </div>
                     {libraryStatus === 'loading' ? (
@@ -582,7 +581,6 @@ function App() {
                       </ol>
                     )}
                   </section>
-                )}
               </aside>
             </div>
           </section>
@@ -592,7 +590,7 @@ function App() {
       <footer className="player-bar" id="radio">
         <audio ref={audioRef} src={currentTrack?.audioUrl ?? undefined} preload="metadata" onCanPlay={resumeSelectedTrack} onLoadedMetadata={(event) => setTrackDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onEnded={() => skipTrack(1)} onPause={(event) => { if (event.currentTarget.paused) setIsPlaying(false); }} onPlay={() => setIsPlaying(true)} onError={(event) => { if (event.currentTarget.error?.code !== 1) setLibraryError('No se pudo leer este archivo de audio.'); }} />
         <div className="station-art" aria-hidden="true"><span className="record-disc"><span /></span><span className="art-sparkle">✳</span></div>
-        <div className="station-info"><div className="station-title">{currentTrack?.title ?? 'Tu música'}</div><div className="station-subtitle">{currentTrack?.artist ?? 'Añade canciones para empezar'}</div></div>
+        <div className="station-info"><div className="station-title">{currentTrack?.title ?? 'Mi música'}</div><div className="station-subtitle">{currentTrack?.artist ?? 'Añade canciones para empezar'}</div></div>
         <div className="player-divider" />
         <div className="player-controls">
           <button className="player-skip-button" onClick={() => skipTrack(-1)} disabled={library.length === 0} aria-label="Canción anterior" title="Canción anterior"><SkipBack size={17} fill="currentColor" /></button>
