@@ -1,5 +1,95 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const fs = require('node:fs/promises');
+const { randomUUID } = require('node:crypto');
+const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('node:path');
+const openedNotes = new Map();
+
+async function findProjectRoot() {
+  const executableDirectory = path.dirname(app.getPath('exe'));
+  const startPaths = [
+    app.isPackaged ? executableDirectory : app.getAppPath(),
+    process.cwd(),
+    app.getAppPath()
+  ];
+  const visited = new Set();
+
+  for (const startPath of startPaths) {
+    let directory = path.resolve(startPath);
+    while (!visited.has(directory)) {
+      visited.add(directory);
+      try {
+        const packageInfo = JSON.parse(await fs.readFile(path.join(directory, 'package.json'), 'utf8'));
+        if (packageInfo.name === 'marea-lofi') return directory;
+      } catch {}
+
+      const parent = path.dirname(directory);
+      if (parent === directory) break;
+      directory = parent;
+    }
+  }
+
+  return app.isPackaged ? executableDirectory : app.getAppPath();
+}
+
+ipcMain.handle('notes:open', async (event) => {
+  const projectRoot = await findProjectRoot();
+  const notesDirectory = path.join(projectRoot, 'notas');
+  let defaultPath = projectRoot;
+  try {
+    await fs.access(notesDirectory);
+    defaultPath = notesDirectory;
+  } catch {}
+
+  const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+    title: 'Abrir nota de texto',
+    defaultPath,
+    properties: ['openFile'],
+    filters: [{ name: 'Archivos de texto', extensions: ['txt'] }]
+  });
+  if (canceled || filePaths.length === 0) return null;
+
+  const filePath = filePaths[0];
+  if (path.extname(filePath).toLowerCase() !== '.txt') throw new TypeError('Solo se pueden abrir archivos .txt.');
+  const stats = await fs.stat(filePath);
+  if (stats.size > 2_000_000) throw new RangeError('La nota supera el tamaño máximo de 2 MB.');
+
+  const noteId = randomUUID();
+  const fileName = path.basename(filePath);
+  openedNotes.clear();
+  openedNotes.set(noteId, filePath);
+  return {
+    noteId,
+    fileName,
+    title: path.basename(fileName, path.extname(fileName)),
+    content: await fs.readFile(filePath, 'utf8')
+  };
+});
+
+ipcMain.handle('notes:save', async (_event, note) => {
+  if (typeof note?.title !== 'string' || typeof note?.content !== 'string') {
+    throw new TypeError('La nota debe incluir un nombre y texto.');
+  }
+  if (Buffer.byteLength(note.content, 'utf8') > 2_000_000) {
+    throw new RangeError('La nota supera el tamaño máximo de 2 MB.');
+  }
+
+  const safeName = note.title
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '-')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 100);
+  const projectRoot = await findProjectRoot();
+  const notesDirectory = path.join(projectRoot, 'notas');
+  const originalPath = typeof note.noteId === 'string' ? openedNotes.get(note.noteId) : undefined;
+  if (note.noteId && !originalPath) throw new Error('La nota original ya no está abierta.');
+  const filePath = originalPath ?? path.join(notesDirectory, `${safeName || 'Nota'}.txt`);
+
+  if (!originalPath) await fs.mkdir(notesDirectory, { recursive: true });
+  await fs.writeFile(filePath, note.content, 'utf8');
+  const noteId = note.noteId ?? randomUUID();
+  openedNotes.set(noteId, filePath);
+  return { fileName: path.basename(filePath), noteId };
+});
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -12,7 +102,8 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.cjs')
     }
   });
 

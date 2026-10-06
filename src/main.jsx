@@ -4,6 +4,9 @@ import {
   Check,
   Circle,
   ChevronLeft,
+  FilePlus2,
+  FileText,
+  FolderOpen,
   Headphones,
   ListTodo,
   Moon,
@@ -12,6 +15,7 @@ import {
   Play,
   Plus,
   RotateCcw,
+  Save,
   SkipBack,
   SkipForward,
   Sun,
@@ -103,6 +107,10 @@ function App() {
   const [tasks, setTasks] = useState(readTasks);
   const [draft, setDraft] = useState('');
   const [view, setView] = useState('space');
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteContent, setNoteContent] = useState('');
+  const [noteId, setNoteId] = useState(null);
+  const [noteStatus, setNoteStatus] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(() => {
@@ -122,6 +130,7 @@ function App() {
   const [libraryError, setLibraryError] = useState('');
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
+  const noteFileInputRef = useRef(null);
   const autoPlaySelectedTrack = useRef(false);
 
   useEffect(() => {
@@ -200,6 +209,72 @@ function App() {
     if (!text) return;
     setTasks((current) => [...current, { id: Date.now(), text, done: false }]);
     setDraft('');
+  }
+
+  async function saveNote() {
+    if (!noteContent.trim()) {
+      setNoteStatus('Escribe una nota antes de guardarla.');
+      return;
+    }
+
+    const safeName = noteTitle.trim().replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/[. ]+$/g, '').slice(0, 100) || 'Nota';
+    try {
+      if (window.marea?.saveNote) {
+        const saved = await window.marea.saveNote({ noteId, title: safeName, content: noteContent });
+        setNoteId(saved.noteId);
+        setNoteStatus(noteId ? `Cambios guardados en ${saved.fileName}` : `Guardada en kofi_lofi/notas/${saved.fileName}`);
+      } else {
+        const url = URL.createObjectURL(new Blob([noteContent], { type: 'text/plain;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${safeName}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+        setNoteStatus(`Descargada como ${safeName}.txt`);
+      }
+    } catch {
+      setNoteStatus('No se pudo guardar la nota.');
+    }
+  }
+
+  async function openNote() {
+    try {
+      if (window.marea?.openNote) {
+        const opened = await window.marea.openNote();
+        if (!opened) return;
+        setNoteId(opened.noteId);
+        setNoteTitle(opened.title);
+        setNoteContent(opened.content);
+        setNoteStatus(`Abierta: ${opened.fileName}`);
+        return;
+      }
+
+      noteFileInputRef.current?.click();
+    } catch {
+      setNoteStatus('No se pudo abrir el archivo.');
+    }
+  }
+
+  async function readNoteFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      setNoteId(null);
+      setNoteTitle(file.name.replace(/\.txt$/i, ''));
+      setNoteContent(await file.text());
+      setNoteStatus('La vista web guardará una copia descargable.');
+    } catch {
+      setNoteStatus('No se pudo leer el archivo.');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
+  function startNewNote() {
+    setNoteId(null);
+    setNoteTitle('');
+    setNoteContent('');
+    setNoteStatus('');
   }
 
   async function togglePlayback() {
@@ -308,6 +383,7 @@ function App() {
         <nav className="main-nav" aria-label="Navegación principal">
           <button className={`nav-item${view === 'space' ? ' active' : ''}`} onClick={() => setView('space')}><span className="nav-icon"><Waves size={17} /></span>Mi espacio</button>
           <button className={`nav-item${view === 'radio' ? ' active' : ''}`} onClick={() => setView('radio')}><span className="nav-icon"><Music2 size={17} /></span>Música</button>
+          <button className={`nav-item${view === 'notes' ? ' active' : ''}`} onClick={() => setView('notes')}><span className="nav-icon"><FileText size={17} /></span>Notas</button>
         </nav>
 
         <section className="settings-section" aria-label="Ajustes">
@@ -411,6 +487,34 @@ function App() {
             </div>
 
           </>
+        ) : view === 'notes' ? (
+          <section className="notes-view" aria-labelledby="notes-title">
+            <div className="notes-heading-row">
+              <div className="notes-heading">
+                <div className="eyebrow"><span className="eyebrow-line" />TEXTO LOCAL</div>
+                <h1 id="notes-title">Notas</h1>
+              </div>
+              <div className="notes-actions">
+                <input ref={noteFileInputRef} className="note-file-input" type="file" accept=".txt,text/plain" onChange={readNoteFile} aria-label="Abrir archivo TXT" />
+                <button className="notes-action-button" onClick={openNote}><FolderOpen size={15} />Abrir TXT</button>
+                <button className="notes-action-button" onClick={startNewNote}><FilePlus2 size={15} />Nueva nota</button>
+              </div>
+            </div>
+            <section className="notes-editor" aria-label="Editor de notas">
+              <div className="notes-editor-header">
+                <label className="note-name-field">
+                  <span>Nombre del archivo</span>
+                  <div><input value={noteTitle} readOnly={Boolean(noteId)} onChange={(event) => { setNoteTitle(event.target.value); setNoteStatus(''); }} placeholder="Nota nueva" aria-label="Nombre del archivo de nota" /><span>.txt</span></div>
+                </label>
+                <span className="notes-folder-hint">kofi_lofi/notas</span>
+              </div>
+              <textarea className="notes-textarea" value={noteContent} onChange={(event) => { setNoteContent(event.target.value); setNoteStatus(''); }} placeholder="Escribe aquí…" aria-label="Texto de la nota" />
+              <div className="notes-editor-footer">
+                <span className="note-status" role="status">{noteStatus}</span>
+                <button className="save-note-button" onClick={saveNote}><Save size={16} />Guardar nota</button>
+              </div>
+            </section>
+          </section>
         ) : (
           <section className="radio-view" aria-labelledby="radio-title">
             <div className="radio-heading">
