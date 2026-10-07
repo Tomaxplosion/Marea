@@ -254,10 +254,19 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .volume-slider { width: 60px; height: 3px; accent-color: #738b71; cursor: pointer; }
 .radio-error { position: absolute; right: 35px; bottom: 88px; max-width: 300px; padding: 10px 13px; border: 1px solid #f0d8cc; border-radius: 5px; color: #9c513e; background: #fff6f1; font-size: 11px; }
 
-@media (min-width: 1500px) {
-  .main-content { padding-right: 76px; padding-left: 76px; }
-  .focus-panel, .tasks-panel { min-height: 415px; }
-  .timer-area { padding-top: 28px; }
+@media (min-width: 1360px) {
+  .main-content { width: calc(100% - 226px); max-width: none; padding-right: clamp(42px, 3.8vw, 88px); padding-left: clamp(42px, 3.8vw, 88px); }
+  .dashboard-grid { grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: 28px; }
+  .focus-panel, .tasks-panel { min-height: min(62vh, 720px); }
+  .focus-panel { padding: 30px 32px 24px; }
+  .tasks-panel { padding: 26px 28px 22px; }
+  .timer-area { padding-top: clamp(30px, 4vh, 56px); }
+  .timer-ring { width: clamp(220px, 28vh, 320px); height: clamp(220px, 28vh, 320px); }
+  .task-row { min-height: 48px; }
+  .radio-view, .radio-grid { width: 100%; max-width: none; }
+  .now-playing-panel, .rapid-search-panel { min-height: min(62vh, 720px); }
+  .rapid-search-panel { width: 100%; max-width: none; margin: 0; padding: 26px; }
+  .rapid-results { min-height: 0; max-height: none; flex: 1; align-content: start; }
 }
 @media (max-width: 1040px) {
   .sidebar { width: 190px; padding-right: 14px; padding-left: 14px; }
