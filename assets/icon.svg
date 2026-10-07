@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Marea app icon">
+  <rect width="512" height="512" rx="110" fill="#6d8d7d"/>
+  <g fill="none" stroke="#f5f1e9" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 200C146 150 182 150 222 200S296 250 354 200S414 150 420 200"/>
+    <path d="M96 276C146 226 182 226 222 276S296 326 354 276S414 226 420 276"/>
+    <path d="M96 352C146 302 182 302 222 352S296 402 354 352S414 302 420 352"/>
+  </g>
+</svg>

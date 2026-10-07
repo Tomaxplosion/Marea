@@ -213,8 +213,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .player-bar { position: fixed; inset: auto 0 0 226px; z-index: 5; min-height: 83px; display: flex; align-items: center; gap: 14px; padding: 11px 35px; border-top: 1px solid #e6e4da; background: rgba(250, 249, 244, .97); backdrop-filter: blur(16px); }
 .player-bar audio { display: none; }
+.youtube-video-stage { display: contents; }
 .youtube-embed-shell { position: relative; width: 180px; min-width: 180px; height: 100px; overflow: hidden; border-radius: 10px; border: 1px solid rgba(255,255,255,.18); background: #111; }
 .youtube-embed-shell iframe { width: 100%; height: 100%; border: 0; }
+.youtube-video-expand, .youtube-video-close { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; color: #f5f1e4; background: #315847; cursor: pointer; transition: background .18s ease, transform .18s ease; }
+.youtube-video-expand:hover, .youtube-video-close:hover { transform: scale(1.06); background: #416e59; }
+.youtube-video-backdrop { position: fixed; inset: 0; z-index: 0; border: 0; background: radial-gradient(ellipse at center, rgba(31, 41, 34, .56) 0%, rgba(14, 19, 16, .88) 66%, #070908 100%); backdrop-filter: blur(12px); cursor: default; pointer-events: auto; animation: youtube-backdrop-enter .38s ease both; }
+.youtube-video-stage.is-expanded { position: fixed; top: 50%; left: 50%; z-index: 1; display: block; width: min(96vw, 160vh); aspect-ratio: 16 / 9; transform: translate(-50%, -50%); pointer-events: auto; animation: youtube-video-enter .5s cubic-bezier(.2,.75,.25,1) both; }
+.youtube-video-stage.is-expanded::before { position: absolute; inset: -46px; z-index: -1; border-radius: 28px; background: radial-gradient(ellipse, rgba(223, 195, 152, .12) 0%, rgba(82, 115, 90, .16) 48%, transparent 74%); filter: blur(28px); content: ''; pointer-events: none; }
+.youtube-video-stage.is-expanded .youtube-embed-shell { position: absolute; inset: 0; width: 100%; min-width: 0; height: 100%; overflow: hidden; border-color: rgba(255,255,255,.24); border-radius: 8px; box-shadow: 0 26px 90px rgba(0,0,0,.52); }
+.youtube-video-stage.is-expanded iframe { display: block; width: 100%; height: 100%; border-radius: 8px; }
+.youtube-video-close { position: absolute; top: 12px; right: 12px; z-index: 2; color: #f5f1e4; background: rgba(30, 40, 34, .9); }
+.player-bar.video-expanded { inset: 0; z-index: 30; min-height: 0; gap: 0; padding: 0; border: 0; background: transparent; backdrop-filter: none; pointer-events: none; }
+.player-bar.video-expanded > :not(.youtube-video-stage):not(.youtube-video-backdrop) { visibility: hidden; }
+@keyframes youtube-backdrop-enter { from { opacity: 0; } to { opacity: 1; } }
+@keyframes youtube-video-enter { from { opacity: 0; transform: translate(-50%, -46%) scale(.96); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 .station-art { position: relative; display: grid; width: 49px; height: 49px; flex: none; place-items: center; overflow: hidden; border-radius: 6px; background: linear-gradient(145deg, #d8c9a6, #a2ad91 60%, #6d8775); }
 .station-art::before, .station-art::after { position: absolute; width: 30px; height: 1px; background: rgba(255, 249, 220, .49); content: ''; transform: rotate(-38deg); }
 .station-art::before { top: 13px; left: -5px; }
@@ -333,6 +346,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .song-progress-control input::-webkit-slider-thumb { width: 10px; height: 10px; appearance: none; border: 2px solid #f5edda; border-radius: 50%; background: #d99071; }
 .song-progress-control input:disabled { opacity: .5; cursor: default; }
 .song-progress-time { display: flex; justify-content: space-between; margin-top: 7px; color: rgba(244, 241, 223, .63); font-size: 9px; font-variant-numeric: tabular-nums; }
+.song-progress-live { position: relative; z-index: 1; width: min(100%, 550px); margin-top: auto; padding-top: 25px; }
 .empty-library-add { position: relative; z-index: 1; margin-top: 18px; }
 .library-error { position: relative; z-index: 1; margin: 8px 0 0; color: #ffd2be; font-size: 10px; }
 .now-playing-top { width: 100%; }
@@ -563,9 +577,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     .sidebar { display: grid; height: auto; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 59px auto; align-items: center; gap: 0; }
     .brand { grid-column: 1; grid-row: 1; }
     .main-nav { grid-column: 2; grid-row: 1; }
-    .settings-section { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); }
+    .settings-section { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: auto repeat(2, minmax(0, 1fr)); align-items: center; gap: 9px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); }
     .settings-section .side-label { display: block; margin: 0; }
-    .theme-setting { width: min(100%, 220px); min-height: 34px; justify-self: end; }
+    .theme-setting { width: min(100%, 220px); min-height: 34px; justify-self: stretch; }
   }
 
   .notes-view { padding: 43px 0 30px; }

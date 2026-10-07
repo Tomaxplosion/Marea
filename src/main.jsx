@@ -10,6 +10,8 @@ import {
   Headphones,
   ListTodo,
   ListMusic,
+  Maximize2,
+  Minimize2,
   Moon,
   Music2,
   Pause,
@@ -25,198 +27,23 @@ import {
   X
 } from 'lucide-react';
 import './style.css';
-
-const defaultTasks = [
-  { id: 1, text: 'Repasar los apuntes de hoy', done: false },
-  { id: 2, text: 'Avanzar con el proyecto', done: false },
-  { id: 3, text: 'Leer un capítulo', done: true }
-];
-
-const MAX_DURATION_MINUTES = 8 * 60;
-const TRACK_DATABASE = 'marea-audio-library';
-const TRACK_STORE = 'tracks';
-const YOUTUBE_TRACKS_KEY = 'marea-youtube-tracks';
-const PLAYLISTS_KEY = 'marea-playlists';
-const YOUTUBE_API_ENDPOINT = import.meta.env.VITE_YOUTUBE_API_URL?.replace(/\/+$/, '');
-let youtubePlayerApiPromise;
-
-function normalizeYoutubeTrack(item) {
-  const youtubeId = item.id.videoId;
-  return {
-    id: `youtube-${youtubeId}`,
-    title: item.snippet?.title || 'Vídeo de YouTube',
-    artist: item.snippet?.channelTitle || 'YouTube Lofi',
-    youtubeId,
-    source: 'youtube',
-    kind: 'video'
-  };
-}
-
-function openTrackDatabase() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(TRACK_DATABASE, 1);
-    request.onupgradeneeded = () => request.result.createObjectStore(TRACK_STORE, { keyPath: 'id' });
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function readSavedTracks() {
-  const database = await openTrackDatabase();
-  const tracks = await new Promise((resolve, reject) => {
-    const request = database.transaction(TRACK_STORE).objectStore(TRACK_STORE).getAll();
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-  database.close();
-  return tracks.sort((first, second) => (first.order ?? 0) - (second.order ?? 0));
-}
-
-async function saveTracks(tracks) {
-  const database = await openTrackDatabase();
-  await new Promise((resolve, reject) => {
-    const transaction = database.transaction(TRACK_STORE, 'readwrite');
-    tracks.forEach((track) => transaction.objectStore(TRACK_STORE).put(track));
-    transaction.oncomplete = resolve;
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
-  });
-  database.close();
-}
-
-function readSavedYoutubeTracks() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(YOUTUBE_TRACKS_KEY));
-    return Array.isArray(saved)
-      ? saved.filter((track) => track?.source === 'youtube' && track.id && track.youtubeId)
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function readSavedPlaylists() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(PLAYLISTS_KEY));
-    return Array.isArray(saved)
-      ? saved.filter((playlist) => playlist?.id && typeof playlist.name === 'string' && Array.isArray(playlist.trackIds))
-        .map((playlist) => ({
-          id: playlist.id,
-          name: playlist.name,
-          trackIds: playlist.trackIds.filter((trackId) => typeof trackId === 'string'),
-          shuffle: Boolean(playlist.shuffle)
-        }))
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function loadYoutubePlayerApi() {
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-  if (youtubePlayerApiPromise) return youtubePlayerApiPromise;
-
-  youtubePlayerApiPromise = new Promise((resolve, reject) => {
-    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
-    const script = document.createElement('script');
-    script.src = 'https://www.youtube.com/iframe_api';
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-  return youtubePlayerApiPromise;
-}
-
-function getTrackName(filename) {
-  const name = filename.replace(/\.[^.]+$/, '');
-  const separator = name.indexOf(' - ');
-  return separator > 0
-    ? { artist: name.slice(0, separator), title: name.slice(separator + 3) }
-    : { artist: 'Tu biblioteca', title: name };
-}
-
-function formatPlaybackTime(seconds) {
-  const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
-  return `${Math.floor(safeSeconds / 60)}:${String(safeSeconds % 60).padStart(2, '0')}`;
-}
-
-function formatTimerTime(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor(safeSeconds % 3600 / 60);
-  const seconds = safeSeconds % 60;
-
-  if (hours === 0 && minutes === 0) return `${seconds} s`;
-  if (hours === 0) return `${minutes}:${String(seconds).padStart(2, '0')}`;
-
-  const parts = [`${hours} h`];
-  if (minutes > 0) parts.push(`${minutes} min`);
-  if (seconds > 0) parts.push(`${seconds} s`);
-  return parts.join(' ');
-}
-
-function formatCompactTimerTime(totalSeconds) {
-  const safeSeconds = Math.max(0, Math.floor(totalSeconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor(safeSeconds % 3600 / 60);
-  const seconds = safeSeconds % 60;
-  const clockMinutes = hours > 0 ? minutes : Math.floor(safeSeconds / 60);
-  const clock = `${String(clockMinutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  return hours > 0 ? `${String(hours).padStart(2, '0')}:${clock}` : clock;
-}
-
-function playTimerCompletionSound(audioContext) {
-  if (!audioContext) return;
-  if (audioContext.state === 'suspended') {
-    audioContext.resume().then(() => playTimerCompletionSound(audioContext)).catch(() => {});
-    return;
-  }
-  if (audioContext.state !== 'running') return;
-
-  [
-    { frequency: 587.33, delay: 0 },
-    { frequency: 783.99, delay: 0.16 }
-  ].forEach(({ frequency, delay }) => {
-    const oscillator = audioContext.createOscillator();
-    const gain = audioContext.createGain();
-    const start = audioContext.currentTime + delay;
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(frequency, start);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.075, start + 0.025);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.8);
-    oscillator.connect(gain);
-    gain.connect(audioContext.destination);
-    oscillator.start(start);
-    oscillator.stop(start + 0.82);
-  });
-}
-
-function playNoteKeySound(audioContext) {
-  if (!audioContext || audioContext.state !== 'running') return;
-
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
-  const now = audioContext.currentTime;
-  oscillator.type = 'triangle';
-  oscillator.frequency.setValueAtTime(195 + Math.random() * 35, now);
-  oscillator.frequency.exponentialRampToValueAtTime(125, now + 0.06);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.025, now + 0.004);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.065);
-}
-
-function readTasks() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('marea-tasks'));
-    return Array.isArray(saved) ? saved : defaultTasks;
-  } catch {
-    return defaultTasks;
-  }
-}
+import { defaultTasks, MAX_DURATION_MINUTES, readTasks, formatPlaybackTime, formatTimerTime, formatCompactTimerTime } from './lib/time.js';
+import { playTimerCompletionSound, playNoteKeySound } from './lib/audio.js';
+import {
+  loadYoutubePlayerApi,
+  normalizeYoutubeTrack,
+  openTrackDatabase,
+  PLAYLISTS_KEY,
+  readSavedPlaylists,
+  readSavedTracks,
+  readSavedYoutubeTracks,
+  saveTracks,
+  TRACK_DATABASE,
+  TRACK_STORE,
+  YOUTUBE_API_ENDPOINT,
+  YOUTUBE_TRACKS_KEY,
+  getTrackName
+} from './lib/music.js';
 
 function App() {
   const [tasks, setTasks] = useState(readTasks);
@@ -227,6 +54,7 @@ function App() {
   const [noteId, setNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(() => {
     const saved = Number(localStorage.getItem('marea-duration'));
@@ -251,6 +79,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(70);
   const [libraryError, setLibraryError] = useState('');
+  const [youtubeExpanded, setYoutubeExpanded] = useState(false);
   const [youtubeSearch, setYoutubeSearch] = useState('lofi study');
   const [youtubeResults, setYoutubeResults] = useState([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
@@ -281,6 +110,27 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
+    const unsubscribe = window.marea?.onFullscreenChanged?.(setIsFullscreen);
+    window.marea?.isFullscreen?.().then(setIsFullscreen).catch(() => {});
+    const updateBrowserFullscreen = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', updateBrowserFullscreen);
+    return () => {
+      unsubscribe?.();
+      document.removeEventListener('fullscreenchange', updateBrowserFullscreen);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenShortcut = (event) => {
+      if (event.key !== 'F11' || event.repeat) return;
+      event.preventDefault();
+      toggleFullscreen();
+    };
+    window.addEventListener('keydown', handleFullscreenShortcut);
+    return () => window.removeEventListener('keydown', handleFullscreenShortcut);
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(PLAYLISTS_KEY, JSON.stringify(playlists));
   }, [playlists]);
 
@@ -307,7 +157,7 @@ function App() {
     if (libraryStatus !== 'ready') return;
     const savedYoutubeTracks = library
       .filter((track) => track.source === 'youtube')
-      .map(({ id, title, artist, youtubeId, source, kind }) => ({ id, title, artist, youtubeId, source, kind }));
+      .map(({ id, title, artist, youtubeId, source, kind, isLive }) => ({ id, title, artist, youtubeId, source, kind, isLive }));
     try {
       localStorage.setItem(YOUTUBE_TRACKS_KEY, JSON.stringify(savedYoutubeTracks));
     } catch {
@@ -346,8 +196,32 @@ function App() {
   ));
   const time = formatTimerTime(seconds);
   const compactTime = formatCompactTimerTime(seconds);
+  useEffect(() => {
+    if (currentTrack?.source !== 'youtube') return undefined;
+
+    const updateYoutubeProgress = () => {
+      const player = youtubePlayerRef.current;
+      if (!player) return;
+      const duration = player.getDuration();
+      const current = player.getCurrentTime();
+      if (Number.isFinite(duration) && duration > 0) {
+        setTrackDuration((previous) => previous === duration ? previous : duration);
+      }
+      if (Number.isFinite(current) && current >= 0) {
+        setCurrentTime((previous) => Math.abs(previous - current) < 0.5 ? previous : current);
+      }
+    };
+
+    updateYoutubeProgress();
+    const interval = window.setInterval(updateYoutubeProgress, 500);
+    return () => window.clearInterval(interval);
+  }, [currentTrack?.source, currentTrack?.youtubeId]);
+
   const timerProgress = Math.min(100, Math.max(0, (1 - seconds / (durationMinutes * 60)) * 100));
   const progress = trackDuration > 0 ? currentTime / trackDuration * 100 : 0;
+  const isLiveYoutubeTrack = currentTrack?.source === 'youtube' && (
+    currentTrack.isLive || (trackDuration > 24 * 60 * 60 && trackDuration - currentTime <= 60 * 60 + 30)
+  );
   const isCurrentYoutubeQuery = youtubeSearch.trim() === youtubeLastQuery;
   const hasMoreYoutubeResults = isCurrentYoutubeQuery && Boolean(youtubeNextPageToken);
   const youtubeResultsExhausted = isCurrentYoutubeQuery && Boolean(youtubeLastQuery) && !youtubeNextPageToken;
@@ -372,7 +246,7 @@ function App() {
         width: '180',
         height: '100',
         videoId: currentTrack.youtubeId,
-        playerVars: { autoplay: isPlayingRef.current ? 1 : 0, controls: 1, rel: 0, modestbranding: 1 },
+        playerVars: { autoplay: isPlayingRef.current ? 1 : 0, controls: 0, disablekb: 1, fs: 0, iv_load_policy: 3, playsinline: 1, rel: 0 },
         events: {
           onReady: (event) => {
             if (isPlayingRef.current) event.target.playVideo();
@@ -423,6 +297,18 @@ function App() {
       audioContextRef.current.resume().catch(() => {});
     }
     return audioContextRef.current;
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (window.marea?.toggleFullscreen) {
+        setIsFullscreen(await window.marea.toggleFullscreen());
+      } else if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {}
   }
 
   function toggleTimer() {
@@ -789,6 +675,7 @@ function App() {
       audioUrl: result.url,
       source: result.source || 'youtube',
       kind: result.kind || 'video',
+      isLive: Boolean(result.isLive),
       isRemote: true
     };
 
@@ -797,7 +684,7 @@ function App() {
       const existingIndex = current.findIndex((item) => item.id === track.id);
       if (existingIndex >= 0) {
         nextIndex = existingIndex;
-        return current;
+        return current.map((item) => item.id === track.id ? { ...item, isLive: track.isLive } : item);
       }
       nextIndex = current.length;
       return [...current, track];
@@ -863,8 +750,14 @@ function App() {
 
   function seekTrack(event) {
     const nextTime = Number(event.target.value);
-    if (!audioRef.current || !Number.isFinite(nextTime)) return;
-    audioRef.current.currentTime = nextTime;
+    if (!Number.isFinite(nextTime)) return;
+    if (currentTrack?.source === 'youtube') {
+      youtubePlayerRef.current?.seekTo(nextTime, true);
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = nextTime;
+    } else {
+      return;
+    }
     setCurrentTime(nextTime);
   }
 
@@ -889,6 +782,12 @@ function App() {
             <span className="theme-setting-icon">{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
             <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{theme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
             <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
+            <span className="theme-switch" aria-hidden="true"><span /></span>
+          </label>
+          <label className="theme-setting">
+            <span className="theme-setting-icon">{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</span>
+            <span className="theme-setting-copy"><strong>Pantalla completa</strong><small>{isFullscreen ? 'Activada' : 'Desactivada'}</small></span>
+            <input className="theme-checkbox" type="checkbox" checked={isFullscreen} onChange={toggleFullscreen} aria-label="Pantalla completa" />
             <span className="theme-switch" aria-hidden="true"><span /></span>
           </label>
         </section>
@@ -1055,11 +954,15 @@ function App() {
                   </button>
                   <button className="track-skip-button" onClick={() => skipTrack(1)} disabled={library.length === 0} aria-label="Canción siguiente" title="Canción siguiente"><SkipForward size={18} fill="currentColor" /></button>
                 </div>
-                <label className="song-progress-control">
-                  <span className="sr-only">Progreso de la canción</span>
-                  <input type="range" min="0" max={trackDuration || 1} step="0.1" value={Math.min(currentTime, trackDuration || 0)} onChange={seekTrack} disabled={!currentTrack || trackDuration === 0} style={{ '--progress': `${progress}%` }} aria-label="Progreso de la canción" />
-                  <span className="song-progress-time"><span>{formatPlaybackTime(currentTime)}</span><span>{formatPlaybackTime(trackDuration)}</span></span>
-                </label>
+                {isLiveYoutubeTrack ? (
+                  <div className="song-progress-live" role="status"><span className="live-indicator"><span />EN DIRECTO</span></div>
+                ) : (
+                  <label className="song-progress-control">
+                    <span className="sr-only">Progreso de la canción</span>
+                    <input type="range" min="0" max={trackDuration || 1} step="0.1" value={Math.min(currentTime, trackDuration || 0)} onChange={seekTrack} disabled={!currentTrack || trackDuration === 0} style={{ '--progress': `${progress}%` }} aria-label="Progreso de la canción" />
+                    <span className="song-progress-time"><span>{formatPlaybackTime(currentTime)}</span><span>{formatPlaybackTime(trackDuration)}</span></span>
+                  </label>
+                )}
                 {!currentTrack && <button className="empty-library-add" onClick={() => fileInputRef.current?.click()}><Plus size={16} />Añadir archivos de audio</button>}
                 <span className="now-playing-decoration" aria-hidden="true">✳</span>
               </section>
@@ -1242,12 +1145,19 @@ function App() {
         )}
       </main>
 
-      <footer className="player-bar" id="radio">
-        <audio ref={audioRef} src={currentTrack?.source === 'youtube' ? '' : (currentTrack?.audioUrl ?? undefined)} preload="metadata" onCanPlay={resumeSelectedTrack} onLoadedMetadata={(event) => setTrackDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onEnded={() => skipTrack(1)} onPause={(event) => { if (event.currentTarget.paused) setIsPlaying(false); }} onPlay={() => setIsPlaying(true)} onError={(event) => { if (event.currentTarget.error?.code !== 1) setLibraryError('No se pudo leer este archivo de audio.'); }} />
+      <footer className={`player-bar${youtubeExpanded ? ' video-expanded' : ''}`} id="radio">
+        <audio ref={audioRef} src={currentTrack?.source === 'youtube' ? undefined : currentTrack?.audioUrl} preload="metadata" onCanPlay={resumeSelectedTrack} onLoadedMetadata={(event) => { if (currentTrack?.source !== 'youtube') setTrackDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0); }} onTimeUpdate={(event) => { if (currentTrack?.source !== 'youtube') setCurrentTime(event.currentTarget.currentTime); }} onEnded={() => skipTrack(1)} onPause={(event) => { if (event.currentTarget.paused) setIsPlaying(false); }} onPlay={() => setIsPlaying(true)} onError={(event) => { if (currentTrack?.source !== 'youtube' && event.currentTarget.error?.code !== 1) setLibraryError('No se pudo leer este archivo de audio.'); }} />
         {currentTrack?.source === 'youtube' ? (
-          <div className="youtube-embed-shell" aria-label="Reproductor de YouTube">
-            <div ref={youtubeContainerRef} />
-          </div>
+          <>
+            <div className={`youtube-video-stage${youtubeExpanded ? ' is-expanded' : ''}`}>
+              <div className="youtube-embed-shell" aria-label="Reproductor de YouTube">
+                <div ref={youtubeContainerRef} />
+              </div>
+              {youtubeExpanded && <button className="youtube-video-close" onClick={() => setYoutubeExpanded(false)} aria-label="Volver al programa" title="Volver al programa"><X size={19} /></button>}
+            </div>
+            {!youtubeExpanded && <button className="youtube-video-expand" onClick={() => setYoutubeExpanded(true)} aria-label="Ver vídeo en grande" title="Ver vídeo en grande"><Maximize2 size={17} /></button>}
+            {youtubeExpanded && <button className="youtube-video-backdrop" onClick={() => setYoutubeExpanded(false)} aria-label="Volver al programa" />}
+          </>
         ) : (
           <>
             <div className="station-art" aria-hidden="true"><span className="record-disc"><span /></span><span className="art-sparkle">✳</span></div>

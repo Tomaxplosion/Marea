@@ -91,6 +91,17 @@ ipcMain.handle('notes:save', async (_event, note) => {
   return { fileName: path.basename(filePath), noteId };
 });
 
+ipcMain.handle('window:is-fullscreen', (event) => {
+  return BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false;
+});
+
+ipcMain.handle('window:toggle-fullscreen', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window) return false;
+  window.setFullScreen(!window.isFullScreen());
+  return window.isFullScreen();
+});
+
 function createWindow() {
   const window = new BrowserWindow({
     width: 1180,
@@ -100,11 +111,20 @@ function createWindow() {
     backgroundColor: '#f7f6f0',
     title: 'Marea',
     autoHideMenuBar: true,
+    icon: path.join(__dirname, 'assets', 'icon.ico'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
       preload: path.join(__dirname, 'preload.cjs')
     }
+  });
+
+  window.on('enter-full-screen', () => window.webContents.send('window:fullscreen-changed', true));
+  window.on('leave-full-screen', () => window.webContents.send('window:fullscreen-changed', false));
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.key !== 'F11') return;
+    event.preventDefault();
+    window.setFullScreen(!window.isFullScreen());
   });
 
   if (!app.isPackaged) {

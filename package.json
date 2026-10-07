@@ -25,6 +25,7 @@
   "build": {
     "appId": "com.marea.lofi",
     "productName": "Marea",
+    "icon": "build/icon",
     "directories": {
       "output": "release"
     },
@@ -32,7 +33,8 @@
       "dist/**/*",
       "main.cjs",
       "preload.cjs",
-      "package.json"
+      "package.json",
+      "assets/**/*"
     ],
     "win": {
       "signAndEditExecutable": false,
