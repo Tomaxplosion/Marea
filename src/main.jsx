@@ -33,6 +33,19 @@ const defaultTasks = [
 const MAX_DURATION_MINUTES = 8 * 60;
 const TRACK_DATABASE = 'marea-audio-library';
 const TRACK_STORE = 'tracks';
+const YOUTUBE_API_ENDPOINT = import.meta.env.VITE_YOUTUBE_API_URL?.replace(/\/+$/, '');
+
+function normalizeYoutubeTrack(item) {
+  const youtubeId = item.id.videoId;
+  return {
+    id: `youtube-${youtubeId}`,
+    title: item.snippet?.title || 'Vídeo de YouTube',
+    artist: item.snippet?.channelTitle || 'YouTube Lofi',
+    youtubeId,
+    source: 'youtube',
+    kind: 'video'
+  };
+}
 
 function openTrackDatabase() {
   return new Promise((resolve, reject) => {
@@ -128,6 +141,13 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(70);
   const [libraryError, setLibraryError] = useState('');
+  const [youtubeSearch, setYoutubeSearch] = useState('lofi study');
+  const [youtubeResults, setYoutubeResults] = useState([]);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [youtubeError, setYoutubeError] = useState('');
+  const [youtubeNextPageToken, setYoutubeNextPageToken] = useState('');
+  const [youtubeLastQuery, setYoutubeLastQuery] = useState('');
+  const [dropActive, setDropActive] = useState(false);
   const audioRef = useRef(null);
   const fileInputRef = useRef(null);
   const noteFileInputRef = useRef(null);
@@ -182,6 +202,9 @@ function App() {
   const currentTrack = library[selectedTrack];
   const time = formatTimerTime(seconds);
   const progress = trackDuration > 0 ? currentTime / trackDuration * 100 : 0;
+  const isCurrentYoutubeQuery = youtubeSearch.trim() === youtubeLastQuery;
+  const hasMoreYoutubeResults = isCurrentYoutubeQuery && Boolean(youtubeNextPageToken);
+  const youtubeResultsExhausted = isCurrentYoutubeQuery && Boolean(youtubeLastQuery) && !youtubeNextPageToken;
   const today = new Intl.DateTimeFormat('es-ES', {
     weekday: 'long',
     day: 'numeric',
@@ -278,7 +301,14 @@ function App() {
   }
 
   async function togglePlayback() {
-    if (!audioRef.current || !currentTrack) return;
+    if (!currentTrack) return;
+
+    if (currentTrack.source === 'youtube') {
+      setIsPlaying((current) => !current);
+      return;
+    }
+
+    if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -325,15 +355,15 @@ function App() {
     playTrack(nextIndex);
   }
 
-  async function importTracks(event) {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith('audio/'));
-    if (files.length === 0) {
+  async function importTrackFiles(files) {
+    const audioFiles = Array.from(files ?? []).filter((file) => file.type.startsWith('audio/') || /\.(mp3|wav|ogg|m4a|flac)$/i.test(file.name));
+    if (audioFiles.length === 0) {
       setLibraryError('Selecciona archivos de audio compatibles.');
       return;
     }
 
     const importOrder = Date.now();
-    const tracks = files.map((file, index) => {
+    const tracks = audioFiles.map((file, index) => {
       const details = getTrackName(file.name);
       return {
         id: `${file.name}-${file.size}-${file.lastModified}`,
@@ -349,19 +379,131 @@ function App() {
       const existingIds = new Set(library.map((track) => track.id));
       const additions = tracks
         .filter((track) => !existingIds.has(track.id))
-        .map((track) => ({ ...track, audioUrl: URL.createObjectURL(track.file) }));
+        .map((track) => ({ ...track, audioUrl: URL.createObjectURL(track.file), source: 'local', kind: 'track' }));
       if (library.length === 0 && additions.length > 0) setSelectedTrack(0);
-      setLibrary((current) => {
-        return [...current, ...additions];
-      });
+      setLibrary((current) => [...current, ...additions]);
       setLibraryStatus('ready');
       setLibraryError('');
       setDrawerOpen(true);
     } catch {
       setLibraryError('No se pudieron guardar las canciones en este equipo.');
-    } finally {
-      event.target.value = '';
     }
+  }
+
+  async function importTracks(event) {
+    await importTrackFiles(event.target.files ?? []);
+    event.target.value = '';
+  }
+
+  function handleDropFiles(event) {
+    event.preventDefault();
+    setDropActive(false);
+    importTrackFiles(event.dataTransfer?.files ?? []);
+  }
+
+  async function searchLofiContent() {
+    const query = youtubeSearch.trim() || 'lofi study';
+    const isSameQuery = query === youtubeLastQuery;
+    const pageToken = isSameQuery ? youtubeNextPageToken : '';
+    setYoutubeLoading(true);
+    setYoutubeError('');
+
+    try {
+      if (!YOUTUBE_API_ENDPOINT) {
+        throw new Error('El backend de YouTube no está configurado. Define VITE_YOUTUBE_API_URL en .env.local.');
+      }
+      const params = new URLSearchParams({ q: query });
+      if (pageToken) params.set('pageToken', pageToken);
+      const request = await fetch(`${YOUTUBE_API_ENDPOINT}/api/search?${params}`);
+      const payload = await request.json();
+
+      if (!request.ok) {
+        throw new Error(payload.error?.message || 'No se pudo cargar contenido desde YouTube.');
+      }
+
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      const results = items
+        .filter((item) => item?.id?.videoId)
+        .map(normalizeYoutubeTrack);
+      setYoutubeNextPageToken(payload.nextPageToken || '');
+
+      setYoutubeLastQuery(query);
+      setYoutubeResults((current) => {
+        if (!isSameQuery) return results;
+        const existingIds = new Set(current.map((result) => result.id));
+        return [...current, ...results.filter((result) => !existingIds.has(result.id))];
+      });
+    } catch (error) {
+      setYoutubeError(error.message || 'No se pudo cargar música lofi desde YouTube.');
+    } finally {
+      setYoutubeLoading(false);
+    }
+  }
+
+  function queueYoutubeResult(result) {
+    const track = {
+      id: result.id || `${result.title}-${result.artist}-${Date.now()}`,
+      title: result.title,
+      artist: result.artist || 'YouTube Lofi',
+      youtubeId: result.youtubeId,
+      audioUrl: result.url,
+      source: result.source || 'youtube',
+      kind: result.kind || 'video',
+      isRemote: true
+    };
+
+    let nextIndex = library.length;
+    setLibrary((current) => {
+      const existingIndex = current.findIndex((item) => item.id === track.id);
+      if (existingIndex >= 0) {
+        nextIndex = existingIndex;
+        return current;
+      }
+      nextIndex = current.length;
+      return [...current, track];
+    });
+
+    setSelectedTrack(nextIndex);
+    setCurrentTime(0);
+    setTrackDuration(0);
+    setLibraryError('');
+    setDrawerOpen(true);
+    setYoutubeError('');
+  }
+
+  async function removeTrackFromLibrary(index) {
+    const trackToRemove = library[index];
+    if (!trackToRemove) return;
+
+    if (trackToRemove.source === 'local') {
+      try {
+        const database = await openTrackDatabase();
+        await new Promise((resolve, reject) => {
+          const transaction = database.transaction(TRACK_STORE, 'readwrite');
+          const request = transaction.objectStore(TRACK_STORE).delete(trackToRemove.id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+          transaction.onabort = () => reject(transaction.error);
+          transaction.onerror = () => reject(transaction.error);
+        });
+        database.close();
+      } catch {
+        setLibraryError('No se pudo quitar la canción guardada en tu equipo.');
+      }
+    }
+
+    setLibrary((current) => {
+      const next = current.filter((_, itemIndex) => itemIndex !== index);
+      const nextSelectedIndex = next.length === 0 ? 0 : Math.min(index, next.length - 1);
+      setSelectedTrack(nextSelectedIndex);
+      if (audioRef.current && current[index]?.id === trackToRemove.id) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setTrackDuration(0);
+      }
+      return next;
+    });
   }
 
   function seekTrack(event) {
@@ -529,8 +671,10 @@ function App() {
               </div>
             </div>
 
-            <div className="radio-layout">
-              <section className="now-playing-panel" aria-label="Reproductor de música">
+            <div className="radio-grid" onDragOver={(event) => { event.preventDefault(); setDropActive(true); }} onDragEnter={(event) => { event.preventDefault(); setDropActive(true); }} onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setDropActive(false);
+            }} onDrop={handleDropFiles}>
+              <section className={`now-playing-panel${dropActive ? ' dropzone-active' : ''}`} aria-label="Reproductor de música">
                 <div className="now-playing-top"><span className="live-indicator"><span /> {isPlaying ? 'REPRODUCIENDO' : 'TU BIBLIOTECA'}</span><Music2 size={17} /></div>
                 <div className="radio-record"><span className="record-disc"><span /></span></div>
                 <div className="now-playing-station">{currentTrack ? currentTrack.artist : 'MÚSICA LOCAL'} <span>·</span> {currentTrack ? 'Tu biblioteca' : 'Biblioteca'}</div>
@@ -554,6 +698,49 @@ function App() {
                 <span className="now-playing-decoration" aria-hidden="true">✳</span>
               </section>
 
+              <section className="rapid-search-panel" aria-label="Búsqueda de música lofi en YouTube Data API">
+                <div className="rapid-search-header">
+                  <div>
+                    <div className="eyebrow">LOFI DISCOVERY</div>
+                    <h3>Búsqueda rápida</h3>
+                  </div>
+                  <button className="add-music-button" onClick={searchLofiContent} disabled={youtubeLoading || youtubeResultsExhausted}>
+                    {youtubeLoading ? 'Buscando…' : hasMoreYoutubeResults ? 'Buscar más' : youtubeResultsExhausted ? 'Sin más resultados' : 'Buscar lofi'}
+                  </button>
+                </div>
+
+                <div className="rapid-search-bar">
+                  <input
+                    type="text"
+                    value={youtubeSearch}
+                    onChange={(event) => setYoutubeSearch(event.target.value)}
+                    placeholder="Busca estilo lofi"
+                    aria-label="Búsqueda de música lofi en YouTube"
+                  />
+                </div>
+
+                {youtubeError && <p className="rapid-status error">{youtubeError}</p>}
+
+                <div className="rapid-results" role="list">
+                  {youtubeResults.length === 0 ? (
+                    <p className="rapid-empty">Busca un estilo como “lofi study”, “night drift” o “rainy jazz” para cargar contenido de YouTube.</p>
+                  ) : (
+                    youtubeResults.map((result) => (
+                      <article className="rapid-result" key={result.id} role="listitem">
+                        <div className="rapid-result-copy">
+                          <span className="rapid-kind">{result.kind === 'video' ? 'Vídeo' : 'Lista'}</span>
+                          <strong>{result.title}</strong>
+                          <small>{result.artist}</small>
+                        </div>
+                        <button className="rapid-add-button" onClick={() => queueYoutubeResult(result)}>
+                          <Plus size={14} />Añadir
+                        </button>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+
               <aside className={`track-drawer${drawerOpen ? ' is-open' : ''}`}>
                 <button className="track-drawer-toggle" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen} aria-label={drawerOpen ? 'Cerrar lista de canciones' : 'Abrir lista de canciones'} title="Lista de canciones">
                   <span>LISTA</span><ChevronLeft size={19} />
@@ -570,11 +757,14 @@ function App() {
                     ) : (
                       <ol className="track-list">
                         {library.map((track, index) => (
-                          <li key={track.id}>
-                            <button className={`track-row${index === selectedTrack ? ' track-current' : ''}`} onClick={() => playTrack(index)} aria-current={index === selectedTrack ? 'true' : undefined}>
+                          <li key={track.id} className={`track-item${index === selectedTrack ? ' track-current' : ''}`}>
+                            <button className="track-row" onClick={() => playTrack(index)} aria-current={index === selectedTrack ? 'true' : undefined}>
                               <span className="track-index">{index === selectedTrack && isPlaying ? <Music2 size={15} /> : String(index + 1).padStart(2, '0')}</span>
                               <span className="track-details"><span className="track-title">{track.title}</span><span className="track-artist">{track.artist}</span></span>
                               <span className="track-time">{index === selectedTrack && isPlaying ? 'SUENA' : <Play size={13} />}</span>
+                            </button>
+                            <button className="track-remove" onClick={(event) => { event.stopPropagation(); removeTrackFromLibrary(index); }} aria-label={`Quitar ${track.title}`} title={`Quitar ${track.title}`}>
+                              <X size={12} />
                             </button>
                           </li>
                         ))}
@@ -588,9 +778,23 @@ function App() {
       </main>
 
       <footer className="player-bar" id="radio">
-        <audio ref={audioRef} src={currentTrack?.audioUrl ?? undefined} preload="metadata" onCanPlay={resumeSelectedTrack} onLoadedMetadata={(event) => setTrackDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onEnded={() => skipTrack(1)} onPause={(event) => { if (event.currentTarget.paused) setIsPlaying(false); }} onPlay={() => setIsPlaying(true)} onError={(event) => { if (event.currentTarget.error?.code !== 1) setLibraryError('No se pudo leer este archivo de audio.'); }} />
-        <div className="station-art" aria-hidden="true"><span className="record-disc"><span /></span><span className="art-sparkle">✳</span></div>
-        <div className="station-info"><div className="station-title">{currentTrack?.title ?? 'Mi música'}</div><div className="station-subtitle">{currentTrack?.artist ?? 'Añade canciones para empezar'}</div></div>
+        <audio ref={audioRef} src={currentTrack?.source === 'youtube' ? '' : (currentTrack?.audioUrl ?? undefined)} preload="metadata" onCanPlay={resumeSelectedTrack} onLoadedMetadata={(event) => setTrackDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)} onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)} onEnded={() => skipTrack(1)} onPause={(event) => { if (event.currentTarget.paused) setIsPlaying(false); }} onPlay={() => setIsPlaying(true)} onError={(event) => { if (event.currentTarget.error?.code !== 1) setLibraryError('No se pudo leer este archivo de audio.'); }} />
+        {currentTrack?.source === 'youtube' ? (
+          <div className="youtube-embed-shell" aria-label="Reproductor de YouTube">
+            <iframe
+              key={currentTrack.youtubeId}
+              src={`https://www.youtube.com/embed/${currentTrack.youtubeId}?autoplay=${isPlaying ? 1 : 0}&rel=0&modestbranding=1&controls=1`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              title={currentTrack.title}
+            />
+          </div>
+        ) : (
+          <>
+            <div className="station-art" aria-hidden="true"><span className="record-disc"><span /></span><span className="art-sparkle">✳</span></div>
+            <div className="station-info"><div className="station-title">{currentTrack?.title ?? 'Mi música'}</div><div className="station-subtitle">{currentTrack?.artist ?? 'Añade canciones para empezar'}</div></div>
+          </>
+        )}
         <div className="player-divider" />
         <div className="player-controls">
           <button className="player-skip-button" onClick={() => skipTrack(-1)} disabled={library.length === 0} aria-label="Canción anterior" title="Canción anterior"><SkipBack size={17} fill="currentColor" /></button>
@@ -599,9 +803,11 @@ function App() {
           </button>
           <button className="player-skip-button" onClick={() => skipTrack(1)} disabled={library.length === 0} aria-label="Canción siguiente" title="Canción siguiente"><SkipForward size={17} fill="currentColor" /></button>
         </div>
-        <div className="volume-control">
-          <input className="volume-slider" aria-label="Volumen de la música" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} />
-        </div>
+        {currentTrack?.source !== 'youtube' && (
+          <div className="volume-control">
+            <input className="volume-slider" aria-label="Volumen de la música" type="range" min="0" max="100" value={volume} onChange={(event) => setVolume(Number(event.target.value))} />
+          </div>
+        )}
         {libraryError && <div className="radio-error" role="status">{libraryError}</div>}
       </footer>
     </div>
