@@ -54,6 +54,10 @@ function App() {
   const [noteId, setNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
+  const [mood, setMood] = useState(() => {
+    const savedMood = localStorage.getItem('marea-mood');
+    return ['marea', 'night', 'sunrise', 'forest', 'minimal', 'neon'].includes(savedMood) ? savedMood : 'marea';
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [durationMinutes, setDurationMinutes] = useState(() => {
@@ -108,6 +112,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('marea-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('marea-mood', mood);
+  }, [mood]);
 
   useEffect(() => {
     const unsubscribe = window.marea?.onFullscreenChanged?.(setIsFullscreen);
@@ -230,6 +238,14 @@ function App() {
     day: 'numeric',
     month: 'long'
   }).format(new Date());
+  const moodOptions = [
+    { id: 'marea', label: 'Marea' },
+    { id: 'night', label: 'Noche' },
+    { id: 'sunrise', label: 'Amanecer' },
+    { id: 'forest', label: 'Bosque' },
+    { id: 'minimal', label: 'Minimal' },
+    { id: 'neon', label: 'Neon' }
+  ];
   isPlayingRef.current = isPlaying;
 
   useEffect(() => {
@@ -762,7 +778,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme}>
+    <div className="app-shell" data-theme={theme} data-mood={mood === 'marea' ? undefined : mood} data-ambience={mood}>
       <aside className="sidebar">
         <a className="brand" href="#inicio" aria-label="Marea, inicio">
           <span className="brand-mark"><Waves size={20} strokeWidth={2.1} /></span>
@@ -784,6 +800,19 @@ function App() {
             <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
             <span className="theme-switch" aria-hidden="true"><span /></span>
           </label>
+
+          <div className="mood-setting mood-setting-dropdown" aria-label="Estilo visual">
+            <div className="mood-setting-head">
+              <span className="theme-setting-icon"><Sun size={16} /></span>
+              <label className="theme-setting-copy" htmlFor="mood-select"><strong>Ambiente</strong></label>
+            </div>
+            <select id="mood-select" className="mood-select" value={mood} onChange={(event) => setMood(event.target.value)}>
+              {moodOptions.map((option) => (
+                <option key={option.id} value={option.id}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
           <label className="theme-setting">
             <span className="theme-setting-icon">{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</span>
             <span className="theme-setting-copy"><strong>Pantalla completa</strong><small>{isFullscreen ? 'Activada' : 'Desactivada'}</small></span>

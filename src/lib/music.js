@@ -2,7 +2,8 @@ export const TRACK_DATABASE = 'marea-audio-library';
 export const TRACK_STORE = 'tracks';
 export const YOUTUBE_TRACKS_KEY = 'marea-youtube-tracks';
 export const PLAYLISTS_KEY = 'marea-playlists';
-export const YOUTUBE_API_ENDPOINT = import.meta.env.VITE_YOUTUBE_API_URL?.replace(/\/+$/, '');
+const DEFAULT_YOUTUBE_API_ENDPOINT = 'https://marea-youtube-api.spamtom4444.workers.dev';
+export const YOUTUBE_API_ENDPOINT = (import.meta.env.VITE_YOUTUBE_API_URL || DEFAULT_YOUTUBE_API_ENDPOINT).replace(/\/+$/, '');
 
 let youtubePlayerApiPromise;
 
