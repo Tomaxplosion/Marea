@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
+  CalendarDays,
   Check,
   Circle,
   ChevronLeft,
@@ -27,6 +28,8 @@ import {
   X
 } from 'lucide-react';
 import './style.css';
+import Calendar from './components/Calendar.jsx';
+import SleepingAnimal from './components/SleepingAnimal.jsx';
 import { defaultTasks, MAX_DURATION_MINUTES, readTasks, formatPlaybackTime, formatTimerTime, formatCompactTimerTime } from './lib/time.js';
 import { playTimerCompletionSound, playNoteKeySound } from './lib/audio.js';
 import {
@@ -790,6 +793,7 @@ function App() {
           <button className={`nav-item${view === 'space' ? ' active' : ''}`} onClick={() => setView('space')}><span className="nav-icon"><Waves size={17} /></span>Mi oceano</button>
           <button className={`nav-item${view === 'radio' ? ' active' : ''}`} onClick={() => setView('radio')}><span className="nav-icon"><Music2 size={17} /></span>Música</button>
           <button className={`nav-item${view === 'notes' ? ' active' : ''}`} onClick={() => setView('notes')}><span className="nav-icon"><FileText size={17} /></span>Notas</button>
+          <button className={`nav-item${view === 'calendar' ? ' active' : ''}`} onClick={() => setView('calendar')}><span className="nav-icon"><CalendarDays size={17} /></span>Calendario</button>
         </nav>
 
         <section className="settings-section" aria-label="Ajustes">
@@ -820,6 +824,7 @@ function App() {
             <span className="theme-switch" aria-hidden="true"><span /></span>
           </label>
         </section>
+        <SleepingAnimal />
       </aside>
 
       <main className="main-content" id="inicio">
@@ -923,6 +928,8 @@ function App() {
             </div>
 
           </>
+        ) : view === 'calendar' ? (
+          <Calendar />
         ) : view === 'notes' ? (
           <section className="notes-view" aria-labelledby="notes-title">
             <div className="notes-heading-row">

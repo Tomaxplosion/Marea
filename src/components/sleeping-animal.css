@@ -1,0 +1,63 @@
+﻿.sleeping-animal-footer {
+  margin-top: auto;
+  padding-top: 20px;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sleeping-animal {
+  --pet-filter: none;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+.sleeping-animal:hover { background: var(--mood-hover, #8fae9215); }
+.pet-scene { position: relative; display: block; width: 156px; height: 118px; }
+.pet-image {
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  filter: var(--pet-filter);
+  transform-origin: 50% 90%;
+  animation: pet-breathe 2s steps(1, end) infinite;
+  user-select: none;
+}
+.pet-zzz { position: absolute; top: 0; right: 8px; width: 48px; height: 36px; overflow: visible; }
+.pet-z { fill: var(--mood-accent, #8fae92); animation: pet-dream 2s steps(1, end) infinite; }
+.pet-z-two { animation-delay: -1s; }
+.pet-z-three { animation-delay: -2s; opacity: .6; }
+/* The original Marea palette keeps the illustrations' natural colors. */
+.app-shell[data-ambience='night'] .sleeping-animal { --pet-filter: saturate(.65) sepia(.18) hue-rotate(175deg); }
+.app-shell[data-ambience='sunrise'] .sleeping-animal { --pet-filter: sepia(.18) saturate(1.2) hue-rotate(-12deg); }
+.app-shell[data-ambience='forest'] .sleeping-animal { --pet-filter: sepia(.4) saturate(.8) hue-rotate(45deg); }
+.app-shell[data-ambience='minimal'] .sleeping-animal { --pet-filter: grayscale(.85) saturate(.4); }
+.app-shell[data-ambience='neon'] .sleeping-animal { --pet-filter: hue-rotate(280deg) saturate(1.65) drop-shadow(0 0 3px #ff65ce55); }
+@keyframes pet-breathe {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  50% { transform: translateY(-2px) scaleY(1.025); }
+}
+@keyframes pet-dream {
+  0%, 100% { transform: translate(0, 0); opacity: .55; }
+  50% { transform: translate(1px, -2px); opacity: .95; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pet-image, .pet-z { animation: none; }
+}
+@media (min-width: 761px) {
+  .sidebar { overflow-y: auto; }
+}
+@media (max-width: 760px) {
+  .sleeping-animal-footer { grid-column: 1 / -1; grid-row: 4; padding-top: 0; }
+  .sleeping-animal { display: flex; align-items: center; gap: 10px; padding: 0 8px 5px; }
+  .pet-scene { width: 78px; height: 59px; }
+  .pet-zzz { width: 24px; height: 18px; right: 4px; }
+}

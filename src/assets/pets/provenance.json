@@ -1,0 +1,28 @@
+{
+  "tool": "image_gen.imagegen (built-in)",
+  "operation": "background-extraction",
+  "inputs": "Five individual pixel-art animal images supplied by the user.",
+  "transparentBackground": true,
+  "assets": [
+    {
+      "file": "cat.png",
+      "prompt": "Use case: background-extraction. Edit target: second attached image, the gray tabby kitten among the five individually attached animal images (ignore all other animals). Prepare ONE production UI sprite: preserve the exact animal's identity, pose, pixel art silhouette, facial features, paws, curled tail and original colors. Remove the black background to genuine alpha transparency, and remove all Z letters above the animal so these can be animated separately in code. Only the complete sleeping cat on transparent background, no lettering, no ground, no new objects, no shadows outside animal, no backdrop, no glow. Crop away excess empty margins and center the full animal, filling about 85% of the output width with 8% transparent padding, entire ears and tail visible. Preserve crisp square pixel edges, thick dark pixel outlines, no smoothing and no redesign. Output one image, not a collage."
+    },
+    {
+      "file": "dog.png",
+      "prompt": "Use case: background-extraction. Edit target: third attached image, the floppy-eared brown puppy among the five individually attached animal images (ignore all other animals). Prepare ONE production UI sprite: preserve the exact animal's identity, pose, pixel art silhouette, facial features, paws, curled tail and original colors. Remove the black background to genuine alpha transparency, and remove all Z letters above the animal so these can be animated separately in code. Only the complete sleeping dog on transparent background, no lettering, no ground, no new objects, no shadows outside animal, no backdrop, no glow. Crop away excess empty margins and center the full animal, filling about 85% of the output width with 8% transparent padding, entire ears and tail visible. Preserve crisp square pixel edges, thick dark pixel outlines, no smoothing and no redesign. Output one image, not a collage."
+    },
+    {
+      "file": "fox.png",
+      "prompt": "Use case: background-extraction. Edit target: fourth attached image, the orange fox among the five individually attached animal images (ignore all other animals). Prepare ONE production UI sprite: preserve the exact animal's identity, pose, pixel art silhouette, facial features, paws, curled tail and original colors. Remove the black background to genuine alpha transparency, and remove all Z letters above the animal so these can be animated separately in code. Only the complete sleeping fox on transparent background, no lettering, no ground, no new objects, no shadows outside animal, no backdrop, no glow. Crop away excess empty margins and center the full animal, filling about 85% of the output width with 8% transparent padding, entire ears and tail visible. Preserve crisp square pixel edges, thick dark pixel outlines, no smoothing and no redesign. Output one image, not a collage."
+    },
+    {
+      "file": "hamster.png",
+      "prompt": "Use case: background-extraction. Edit target: first attached image, the golden round-eared hamster among the five individually attached animal images (ignore all other animals). Prepare ONE production UI sprite: preserve the exact animal's identity, pose, pixel art silhouette, facial features, paws, curled tail and original colors. Remove the black background to genuine alpha transparency, and remove all Z letters above the animal so these can be animated separately in code. Only the complete sleeping hamster on transparent background, no lettering, no ground, no new objects, no shadows outside animal, no backdrop, no glow. Crop away excess empty margins and center the full animal, filling about 85% of the output width with 8% transparent padding, entire ears and tail visible. Preserve crisp square pixel edges, thick dark pixel outlines, no smoothing and no redesign. Output one image, not a collage."
+    },
+    {
+      "file": "axolotl.png",
+      "prompt": "Use case: background-extraction. Edit target: fifth attached image, the pink axolotl among the five individually attached animal images (ignore all other animals). Prepare ONE production UI sprite: preserve the exact animal's identity, pose, pixel art silhouette, facial features, paws, curled tail and original colors. Remove the black background to genuine alpha transparency, and remove all Z letters above the animal so these can be animated separately in code. Only the complete sleeping axolotl on transparent background, no lettering, no ground, no new objects, no shadows outside animal, no backdrop, no glow. Crop away excess empty margins and center the full animal, filling about 85% of the output width with 8% transparent padding, entire ears and tail visible. Preserve crisp square pixel edges, thick dark pixel outlines, no smoothing and no redesign. Output one image, not a collage."
+    }
+  ]
+}
