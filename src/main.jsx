@@ -5,10 +5,13 @@ import {
   Check,
   Circle,
   ChevronLeft,
+  ChevronDown,
   FilePlus2,
   FileText,
   FolderOpen,
   Headphones,
+  Eye,
+  EyeOff,
   ListTodo,
   ListMusic,
   Maximize2,
@@ -57,6 +60,8 @@ function App() {
   const [noteId, setNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
+  const [isPetVisible, setIsPetVisible] = useState(() => localStorage.getItem('marea-pet-visible') !== 'false');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [mood, setMood] = useState(() => {
     const savedMood = localStorage.getItem('marea-mood');
     return ['marea', 'night', 'sunrise', 'forest', 'minimal', 'neon'].includes(savedMood) ? savedMood : 'marea';
@@ -115,6 +120,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('marea-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('marea-pet-visible', String(isPetVisible));
+  }, [isPetVisible]);
 
   useEffect(() => {
     localStorage.setItem('marea-mood', mood);
@@ -796,35 +805,54 @@ function App() {
           <button className={`nav-item${view === 'calendar' ? ' active' : ''}`} onClick={() => setView('calendar')}><span className="nav-icon"><CalendarDays size={17} /></span>Calendario</button>
         </nav>
 
-        <section className="settings-section" aria-label="Ajustes">
-          <div className="side-label">AJUSTES</div>
-          <label className="theme-setting">
-            <span className="theme-setting-icon">{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
-            <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{theme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
-            <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
-            <span className="theme-switch" aria-hidden="true"><span /></span>
-          </label>
+        <section className={`settings-section${settingsOpen ? ' is-open' : ''}`} aria-label="Ajustes">
+          <button
+            type="button"
+            className="settings-toggle"
+            onClick={() => setSettingsOpen((open) => !open)}
+            aria-expanded={settingsOpen}
+            aria-controls="settings-content"
+          >
+            <span className="settings-toggle-label">AJUSTES</span>
+            <ChevronDown className="settings-toggle-icon" size={16} aria-hidden="true" />
+          </button>
 
-          <div className="mood-setting mood-setting-dropdown" aria-label="Estilo visual">
-            <div className="mood-setting-head">
-              <span className="theme-setting-icon"><Sun size={16} /></span>
-              <label className="theme-setting-copy" htmlFor="mood-select"><strong>Ambiente</strong></label>
+          {settingsOpen && <div className="settings-content" id="settings-content">
+            <label className="theme-setting">
+              <span className="theme-setting-icon">{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
+              <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{theme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
+              <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
+              <span className="theme-switch" aria-hidden="true"><span /></span>
+            </label>
+
+            <div className="mood-setting mood-setting-dropdown" aria-label="Estilo visual">
+              <div className="mood-setting-head">
+                <span className="theme-setting-icon"><Sun size={16} /></span>
+                <label className="theme-setting-copy" htmlFor="mood-select"><strong>Ambiente</strong></label>
+              </div>
+              <select id="mood-select" className="mood-select" value={mood} onChange={(event) => setMood(event.target.value)}>
+                {moodOptions.map((option) => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
             </div>
-            <select id="mood-select" className="mood-select" value={mood} onChange={(event) => setMood(event.target.value)}>
-              {moodOptions.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
-          </div>
 
-          <label className="theme-setting">
-            <span className="theme-setting-icon">{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</span>
-            <span className="theme-setting-copy"><strong>Pantalla completa</strong><small>{isFullscreen ? 'Activada' : 'Desactivada'}</small></span>
-            <input className="theme-checkbox" type="checkbox" checked={isFullscreen} onChange={toggleFullscreen} aria-label="Pantalla completa" />
-            <span className="theme-switch" aria-hidden="true"><span /></span>
-          </label>
+            <label className="theme-setting">
+              <span className="theme-setting-icon">{isPetVisible ? <Eye size={16} /> : <EyeOff size={16} />}</span>
+              <span className="theme-setting-copy"><strong>Mascota</strong><small>{isPetVisible ? 'Visible' : 'Oculta'}</small></span>
+              <input className="theme-checkbox" type="checkbox" checked={isPetVisible} onChange={(event) => setIsPetVisible(event.target.checked)} aria-label="Mostrar mascota" />
+              <span className="theme-switch" aria-hidden="true"><span /></span>
+            </label>
+
+            <label className="theme-setting">
+              <span className="theme-setting-icon">{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</span>
+              <span className="theme-setting-copy"><strong>Pantalla completa</strong><small>{isFullscreen ? 'Activada' : 'Desactivada'}</small></span>
+              <input className="theme-checkbox" type="checkbox" checked={isFullscreen} onChange={toggleFullscreen} aria-label="Pantalla completa" />
+              <span className="theme-switch" aria-hidden="true"><span /></span>
+            </label>
+          </div>}
         </section>
-        <SleepingAnimal />
+        {isPetVisible && <SleepingAnimal />}
       </aside>
 
       <main className="main-content" id="inicio">

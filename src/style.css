@@ -462,7 +462,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
   .settings-section { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); }
-  .settings-section .side-label { margin-bottom: 10px; }
+  .settings-toggle { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 0 9px; border: 0; color: #99998b; background: transparent; cursor: pointer; }
+  .settings-toggle:hover { color: var(--green); }
+  .settings-toggle:focus-visible { outline: 2px solid #d77f63; outline-offset: 2px; }
+  .settings-toggle-label { font-size: 9px; font-weight: 700; letter-spacing: 1.25px; }
+  .settings-toggle-icon { transition: transform .18s ease; }
+  .settings-section.is-open .settings-toggle-icon { transform: rotate(180deg); }
+  .settings-content { margin-top: 10px; }
   .theme-setting { position: relative; display: flex; min-height: 48px; align-items: center; gap: 9px; padding: 0 9px; border-radius: 5px; color: #687168; cursor: pointer; transition: background .16s ease, color .16s ease; }
   .theme-setting:hover { color: #315847; background: #eeefe8; }
   .theme-setting:focus-within { outline: 2px solid #d77f63; outline-offset: 2px; }
@@ -509,6 +515,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .app-shell[data-theme='dark'] .nav-item.active { color: #d5e5d5; background: #2d3a31; }
   .app-shell[data-theme='dark'] .nav-item.active::before { background: #91b08e; }
   .app-shell[data-theme='dark'] .settings-section { border-color: #37413b; }
+  .app-shell[data-theme='dark'] .settings-toggle { color: #a1aaa2; }
+  .app-shell[data-theme='dark'] .settings-toggle:hover { color: #e5ebe6; }
   .app-shell[data-theme='dark'] .theme-setting { color: #bec7bf; }
   .app-shell[data-theme='dark'] .theme-setting:hover { color: #e5ebe6; background: #29312c; }
   .app-shell[data-theme='dark'] .theme-setting-copy small { color: #a1aaa2; }
@@ -601,9 +609,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     .sidebar { display: grid; height: auto; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 59px auto; align-items: center; gap: 0; }
     .brand { grid-column: 1; grid-row: 1; }
     .main-nav { grid-column: 2; grid-row: 1; }
-    .settings-section { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 7px 9px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); }
-    .settings-section .side-label { display: block; grid-column: 1; grid-row: 1 / span 3; margin: 0; }
-    .theme-setting, .mood-setting { grid-column: 2; width: min(100%, 260px); justify-self: end; }
+    .settings-section { display: grid; grid-column: 1 / -1; grid-row: 2; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 7px; margin: 0; padding: 8px 0; border-top: 1px solid var(--line); }
+    .settings-toggle { grid-column: 1; width: min(100%, 260px); justify-self: end; }
+    .settings-content { display: grid; grid-column: 1; gap: 7px; width: min(100%, 260px); justify-self: end; margin-top: 0; }
+    .theme-setting, .mood-setting { grid-column: 1; width: 100%; justify-self: end; }
     .theme-setting { min-height: 34px; }
     .mood-setting { min-height: 0; padding: 5px 9px; }
   }
