@@ -11,7 +11,21 @@ npm.cmd install
 npm.cmd start
 ```
 
+También puedes usar `npm run start`. En PowerShell, usa `npm.cmd run start` si la política de ejecución bloquea `npm.ps1`.
+
+El arranque abre la ventana de Electron y sirve la interfaz en `http://127.0.0.1:5173`. Ese puerto debe estar libre. Si acabas de clonar el proyecto, instala primero las dependencias con `npm.cmd ci`.
+
 En la sección **Música**, añade archivos de audio desde el equipo. La biblioteca se guarda localmente en la aplicación.
+
+## Copias portátiles
+
+En la esquina superior derecha, pulsa el icono **Exportar copia** para guardar un archivo `.marea`. En el otro ordenador, abre Marea y pulsa el icono **Importar copia** para seleccionarlo y confirmar la restauración. Al pasar el cursor sobre cada icono aparece su nombre.
+
+La copia contiene tareas, calendario, preferencias, tiempo restante del Pomodoro, volumen, borrador de la nota abierta, listas de reproducción, referencias de YouTube y los archivos de audio locales completos. También incluye los `.txt` de la carpeta `notas`. No necesitas cuenta ni servidor para transferirla. El archivo puede ocupar más que tu biblioteca de audio.
+
+La importación reemplaza los datos y la biblioteca actuales. Las notas con el mismo nombre se sobrescriben; las demás se conservan. Las notas abiertas desde otras carpetas se incluyen como borrador, sin conservar su ruta original. El temporizador y la reproducción quedan en pausa; la posición de reproducción no se transfiere. YouTube sigue necesitando Internet.
+
+Guarda antes una copia del ordenador de destino si quieres conservar su estado. El archivo contiene tus datos sin cifrar.
 
 ## Búsqueda de YouTube
 

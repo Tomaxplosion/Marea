@@ -1,6 +1,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('marea', Object.freeze({
+  exportBackup: (data) => ipcRenderer.invoke('backup:export', data),
+  openBackup: () => ipcRenderer.invoke('backup:open'),
+  restoreNotes: (notes) => ipcRenderer.invoke('backup:notes', notes),
   openNote: () => ipcRenderer.invoke('notes:open'),
   saveNote: (note) => ipcRenderer.invoke('notes:save', note),
   isFullscreen: () => ipcRenderer.invoke('window:is-fullscreen'),

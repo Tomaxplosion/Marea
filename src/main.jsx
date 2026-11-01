@@ -10,6 +10,8 @@ import {
   FileText,
   FolderOpen,
   Headphones,
+  Import,
+  Share as Export,
   Eye,
   EyeOff,
   ListTodo,
@@ -32,6 +34,7 @@ import {
 } from 'lucide-react';
 import './style.css';
 import Calendar from './components/Calendar.jsx';
+import { createBackup, parseBackup, restoreBackup, readSession } from './lib/backup.mjs';
 import SleepingAnimal from './components/SleepingAnimal.jsx';
 import { defaultTasks, MAX_DURATION_MINUTES, readTasks, formatPlaybackTime, formatTimerTime, formatCompactTimerTime } from './lib/time.js';
 import { playTimerCompletionSound, playNoteKeySound } from './lib/audio.js';
@@ -54,14 +57,16 @@ import {
 function App() {
   const [tasks, setTasks] = useState(readTasks);
   const [draft, setDraft] = useState('');
-  const [view, setView] = useState('space');
-  const [noteTitle, setNoteTitle] = useState('');
-  const [noteContent, setNoteContent] = useState('');
+  const [view, setView] = useState(() => readSession().view || 'space');
+  const [noteTitle, setNoteTitle] = useState(() => readSession().noteTitle || '');
+  const [noteContent, setNoteContent] = useState(() => readSession().noteContent || '');
   const [noteId, setNoteId] = useState(null);
   const [noteStatus, setNoteStatus] = useState('');
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
   const [isPetVisible, setIsPetVisible] = useState(() => localStorage.getItem('marea-pet-visible') !== 'false');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupStatus, setBackupStatus] = useState('');
   const [mood, setMood] = useState(() => {
     const savedMood = localStorage.getItem('marea-mood');
     return ['marea', 'night', 'sunrise', 'forest', 'minimal', 'neon'].includes(savedMood) ? savedMood : 'marea';
@@ -72,7 +77,7 @@ function App() {
     const saved = Number(localStorage.getItem('marea-duration'));
     return Number.isInteger(saved) && saved >= 1 && saved <= MAX_DURATION_MINUTES ? saved : 25;
   });
-  const [seconds, setSeconds] = useState(durationMinutes * 60);
+  const [seconds, setSeconds] = useState(() => readSession().seconds ?? durationMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [library, setLibrary] = useState([]);
   const [playlists, setPlaylists] = useState(readSavedPlaylists);
@@ -89,7 +94,7 @@ function App() {
   const [trackDuration, setTrackDuration] = useState(0);
   const [libraryStatus, setLibraryStatus] = useState('loading');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(70);
+  const [volume, setVolume] = useState(() => readSession().volume ?? 70);
   const [libraryError, setLibraryError] = useState('');
   const [youtubeExpanded, setYoutubeExpanded] = useState(false);
   const [youtubeSearch, setYoutubeSearch] = useState('lofi study');
@@ -108,6 +113,32 @@ function App() {
   const fileInputRef = useRef(null);
   const noteFileInputRef = useRef(null);
   const autoPlaySelectedTrack = useRef(false);
+
+  useEffect(() => {
+    localStorage.setItem('marea-session', JSON.stringify({ view, noteTitle, noteContent, seconds, volume }));
+  }, [view, noteTitle, noteContent, seconds, volume]);
+
+  async function handleBackup(importing) {
+    setBackupBusy(true);
+    setBackupStatus('');
+    try {
+      if (importing) {
+        const text = await window.marea.openBackup();
+        if (text === null) return;
+        const data = parseBackup(text);
+        if (!window.confirm('Se reemplazarán tus tareas, calendario, ajustes y biblioteca. Las notas con el mismo nombre se sobrescribirán. ¿Importar esta copia?')) return;
+        setIsRunning(false);
+        setIsPlaying(false);
+        await restoreBackup(data);
+        window.location.reload();
+      } else {
+        const data = await createBackup({ view, noteTitle, noteContent, seconds, volume });
+        if (await window.marea.exportBackup(data)) setBackupStatus('Copia exportada.');
+      }
+    } catch (error) {
+      setBackupStatus(`No se pudo ${importing ? 'importar' : 'exportar'} la copia. ${error.message}`);
+    } finally { setBackupBusy(false); }
+  }
 
   useEffect(() => {
     localStorage.setItem('marea-tasks', JSON.stringify(tasks));
@@ -858,6 +889,7 @@ function App() {
       <main className="main-content" id="inicio">
         <header className="topbar">
           <div className="date-label"><span className="date-dot" />{today}</div>
+          <div className="topbar-actions">
           {view !== 'space' && (
             <button
               className="mini-timer"
@@ -869,6 +901,12 @@ function App() {
               <span>{compactTime}</span>
             </button>
           )}
+          {window.marea?.exportBackup && <div className="backup-actions" role="group" aria-label="Copia de seguridad" aria-busy={backupBusy}>
+            <span className="backup-status" role="status">{backupBusy ? 'Procesando copia…' : backupStatus}</span>
+            <button className="backup-button" type="button" title="Importar copia" aria-label="Importar copia" disabled={backupBusy || libraryStatus !== 'ready'} onClick={() => handleBackup(true)}><Import size={18} strokeWidth={1.7} aria-hidden="true" /></button>
+            <button className="backup-button" type="button" title="Exportar copia" aria-label="Exportar copia" disabled={backupBusy || libraryStatus !== 'ready'} onClick={() => handleBackup(false)}><Export size={18} strokeWidth={1.7} aria-hidden="true" /></button>
+          </div>}
+          </div>
         </header>
 
         {view === 'space' ? (

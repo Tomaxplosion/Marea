@@ -4,6 +4,58 @@ const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('node:path');
 const openedNotes = new Map();
 
+ipcMain.handle('backup:export', async (event, data) => {
+  const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
+    title: 'Exportar copia de Marea', defaultPath: `Marea-${new Date().toISOString().slice(0, 10)}.marea`,
+    filters: [{ name: 'Copia de Marea', extensions: ['marea'] }]
+  });
+  if (canceled || !filePath) return false;
+  const directory = path.join(await findProjectRoot(), 'notas');
+  const notes = [];
+  let entries = [];
+  try { entries = await fs.readdir(directory, { withFileTypes: true }); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.toLowerCase().endsWith('.txt')) {
+      notes.push({ name: entry.name, content: await fs.readFile(path.join(directory, entry.name), 'utf8') });
+    }
+  }
+  await fs.writeFile(filePath, JSON.stringify({ ...data, notes }), 'utf8');
+  return true;
+});
+
+ipcMain.handle('backup:open', async (event) => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+    title: 'Importar copia de Marea', properties: ['openFile'],
+    filters: [{ name: 'Copia de Marea', extensions: ['marea'] }]
+  });
+  return canceled ? null : fs.readFile(filePaths[0], 'utf8');
+});
+
+ipcMain.handle('backup:notes', async (_event, notes) => {
+  if (!Array.isArray(notes) || notes.some((note) => !note || typeof note.name !== 'string' ||
+    !/^[^<>:"/\\|?*\x00-\x1f]+\.txt$/i.test(note.name) || typeof note.content !== 'string')) {
+    throw new TypeError('Las notas de la copia no son válidas.');
+  }
+  const directory = path.join(await findProjectRoot(), 'notas');
+  await fs.mkdir(directory, { recursive: true });
+  const originals = new Map();
+  for (const note of notes) {
+    try { originals.set(note.name, await fs.readFile(path.join(directory, note.name))); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; originals.set(note.name, null); }
+  }
+  try {
+    for (const note of notes) await fs.writeFile(path.join(directory, note.name), note.content, 'utf8');
+  } catch (error) {
+    for (const [name, content] of originals) {
+      if (content === null) await fs.rm(path.join(directory, name), { force: true });
+      else await fs.writeFile(path.join(directory, name), content);
+    }
+    throw error;
+  }
+  openedNotes.clear();
+});
+
 async function findProjectRoot() {
   const executableDirectory = path.dirname(app.getPath('exe'));
   const startPaths = [
