@@ -4,11 +4,11 @@
 
 El Worker mantiene la clave de Google como secreto del servidor. No se incluye ninguna contraseña compartida en la app. Un cliente de escritorio distribuido no puede mantener secreta una contraseña que todos sus usuarios comparten.
 
-La búsqueda pública se protege con 6 peticiones por minuto e IP (limitador de Cloudflare por ubicación), caché de cinco minutos y un contador global persistente que permite como máximo 80 llamadas a YouTube por día del Pacífico. El contador reserva antes de llamar a Google; también cuenta intentos fallidos. Si faltan las protecciones, el servicio se cierra con 503. No se persisten IPs ni búsquedas en ese contador.
+La búsqueda pública se protege con 6 peticiones por minuto e IP (limitador de Cloudflare por ubicación) y caché de cinco minutos. Si falta el limitador, el servicio se cierra con 503. Marea no aplica un límite diario global. Sin cuentas, los equipos de una misma red comparten el límite por IP.
 
-Los límites protegen la cuota, pero no autentican usuarios: un atacante aún puede agotar las 80 consultas permitidas y dejar sin búsquedas al resto. Para uso privado, protege el Worker con Cloudflare Access y exige inicio de sesión. Para distribución pública con usuarios identificados se necesitaría un flujo OAuth/Access y cuotas por usuario; no basta una clave embebida en React o Electron.
+El limitador reduce el abuso, pero no autentica usuarios ni impide el consumo distribuido entre muchas IPs. Sigue aplicándose la cuota del proyecto en Google. Para uso privado, protege el Worker con Cloudflare Access y exige inicio de sesión. Para distribución pública con usuarios identificados se necesitaría un flujo OAuth/Access y cuotas por usuario; no basta una clave embebida en React o Electron.
 
-En Google Cloud restringe la clave a YouTube Data API v3, configura la cuota del proyecto y alertas, y evita reutilizar la misma clave en otros servicios. Ajusta `DAILY_SEARCH_LIMIT` al presupuesto real del proyecto. No se ha modificado la configuración del proyecto de Google desde este repositorio.
+En Google Cloud restringe la clave a YouTube Data API v3, configura la cuota del proyecto y alertas, y evita reutilizar la misma clave en otros servicios. No se ha modificado la configuración del proyecto de Google desde este repositorio.
 
 ## Copias portátiles
 
@@ -28,9 +28,9 @@ Electron y las herramientas se han actualizado. `npm audit --audit-level=high` s
 
 El workflow fija las acciones oficiales por SHA, no conserva credenciales de checkout y separa el empaquetado (solo lectura) de la publicación (escritura). El escáner revisa patrones de secretos y correos personales del historial sin imprimir valores. No sustituye una revisión humana ni garantiza detectar secretos de cualquier formato.
 
-Desde 1.0.2, las peticiones de subframe a los endpoints HTTPS `/embed/` de YouTube añaden la identificación pública `https://com.marea.lofi/` cuando no existe un Referer HTTP(S). Solo se aplica a ventanas de Marea; no se modifican otras peticiones ni se envían rutas locales. Esto satisface la identificación del cliente del reproductor sin relajar CSP, aislamiento o validación IPC.
+Las peticiones de subframe a los endpoints HTTPS `/embed/` de YouTube añaden la identificación pública `https://com.marea.lofi/` cuando no existe un Referer HTTP(S). Solo se aplica a ventanas de Marea; no se modifican otras peticiones ni se envían rutas locales. Esto satisface la identificación del cliente del reproductor sin relajar CSP, aislamiento o validación IPC.
 
-Los instaladores anteriores no reciben estas defensas automáticamente. Instala la versión 1.0.1 o posterior. Los binarios aún no están firmados digitalmente.
+La release 1.0.0 actual sustituye las publicaciones anteriores e incluye estas defensas y la corrección de reproducción. Actualiza instalando el nuevo setup. Los binarios aún no están firmados digitalmente.
 
 ## Historial y privacidad
 

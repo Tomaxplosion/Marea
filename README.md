@@ -56,9 +56,9 @@ El endpoint desplegado es público. Antes de distribuir la app, configura límit
 
 ## Empaquetar para Windows
 
-Descarga el instalador `Marea-Setup-1.0.2.exe` desde [la última versión de GitHub](https://github.com/Tomaxplosion/Marea/releases/latest). No hace falta instalar Node.js: ejecuta el setup y sigue el asistente. Crea accesos directos con el icono de Marea en el escritorio y en Inicio.
+Descarga el instalador `Marea-Setup-1.0.0.exe` desde [la última versión de GitHub](https://github.com/Tomaxplosion/Marea/releases/latest). No hace falta instalar Node.js: ejecuta el setup y sigue el asistente. Crea accesos directos con el icono de Marea en el escritorio y en Inicio.
 
-La versión 1.0.2 corrige el error 153 de YouTube en la aplicación instalada: identifica Marea mediante el encabezado `Referer` en las peticiones del reproductor. Si el autor de un vídeo prohíbe su reproducción fuera de YouTube, se muestra un mensaje específico y puedes elegir otro vídeo.
+Esta versión corrige el error 153 de YouTube en la aplicación instalada: identifica Marea mediante el encabezado `Referer` en las peticiones del reproductor. Si el autor de un vídeo prohíbe su reproducción fuera de YouTube, se muestra un mensaje específico y puedes elegir otro vídeo.
 
 Las notas de la versión instalada se guardan en la carpeta de datos del usuario (`%APPDATA%/marea-lofi/notas`). Usa una copia `.marea` para llevar tus datos de desarrollo a la versión instalada o a otro ordenador.
 

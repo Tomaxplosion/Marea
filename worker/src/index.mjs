@@ -17,26 +17,6 @@ function jsonResponse(body, status = 200, extraHeaders = {}) {
   });
 }
 
-// One globally named object serializes reservations across all edge locations.
-// Only a day and a counter are persisted; no IPs or search history are stored.
-export class SearchBudget {
-  constructor(state, env) { this.state = state; this.env = env; }
-  async fetch() {
-    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles',
-      year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-    const limit = Number(this.env.DAILY_SEARCH_LIMIT);
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10000) return new Response(null, { status: 503 });
-    const allowed = await this.state.storage.transaction(async (storage) => {
-      const saved = await storage.get('budget');
-      const count = saved?.day === day ? saved.count : 0;
-      if (count >= limit) return false;
-      await storage.put('budget', { day, count: count + 1 });
-      return true;
-    });
-    return new Response(null, { status: allowed ? 204 : 429 });
-  }
-}
-
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -63,7 +43,7 @@ export default {
       return jsonResponse({ error: { message: 'Página no válida.' } }, 400);
     }
     // Fail closed: removing a binding must never expose an unlimited proxy.
-    if (!env.SEARCH_RATE_LIMITER || !env.SEARCH_BUDGET) {
+    if (!env.SEARCH_RATE_LIMITER) {
       return jsonResponse({ error: { message: 'La protección de búsqueda no está configurada.' } }, 503);
     }
     let stage = 'rate-limit';
@@ -79,24 +59,15 @@ export default {
       const cacheKey = new Request(cacheURL);
       const cached = await caches.default.match(cacheKey);
       if (cached) return cached;
-      stage = 'budget';
-      const budget = env.SEARCH_BUDGET.get(env.SEARCH_BUDGET.idFromName('global-youtube-budget'));
-      const reservation = await budget.fetch('https://budget.internal/reserve', { method: 'POST' });
-      if (reservation.status !== 204) {
-        return jsonResponse({ error: { message: reservation.status === 429
-          ? 'Se ha alcanzado el límite diario de búsqueda. Inténtalo mañana.'
-          : 'Búsqueda temporalmente no disponible.' } }, reservation.status === 429 ? 429 : 503);
-      }
-
-    const params = new URLSearchParams({
-      part: 'snippet',
-      type: 'video',
-      videoCategoryId: '10',
-      maxResults: '10',
-      q: `${query} lofi music`,
-      key: env.YOUTUBE_API_KEY
-    });
-    if (pageToken) params.set('pageToken', pageToken);
+      const params = new URLSearchParams({
+        part: 'snippet',
+        type: 'video',
+        videoCategoryId: '10',
+        maxResults: '10',
+        q: `${query} lofi music`,
+        key: env.YOUTUBE_API_KEY
+      });
+      if (pageToken) params.set('pageToken', pageToken);
 
       stage = 'youtube';
       const youtubeResponse = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`, {
