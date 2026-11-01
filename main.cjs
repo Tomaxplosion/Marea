@@ -57,6 +57,8 @@ ipcMain.handle('backup:notes', async (_event, notes) => {
 });
 
 async function findProjectRoot() {
+  // Installed resources are read-only. Keep notes alongside the user's app data.
+  if (app.isPackaged) return app.getPath('userData');
   const executableDirectory = path.dirname(app.getPath('exe'));
   const startPaths = [
     app.isPackaged ? executableDirectory : app.getAppPath(),
@@ -187,6 +189,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  app.setAppUserModelId('com.marea.lofi');
   Menu.setApplicationMenu(null);
   createWindow();
 

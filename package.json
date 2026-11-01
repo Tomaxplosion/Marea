@@ -37,11 +37,26 @@
       "assets/**/*"
     ],
     "win": {
-      "signAndEditExecutable": false,
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": true,
       "target": [
         "nsis",
         "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "Marea",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "Marea-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Marea-Portable-${version}.${ext}"
     }
   },
   "allowScripts": {
