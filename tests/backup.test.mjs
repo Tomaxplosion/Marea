@@ -51,7 +51,10 @@ test('rejects incompatible and malformed copies before restore', () => {
   const valid = { format: 'marea-backup', version: 1, storage: {}, tracks: [], notes: [] };
   for (const invalid of [{ ...valid, version: 2 }, { ...valid, notes: [{ name: '../escape.txt', content: '' }] },
     { ...valid, storage: { 'marea-tasks': '[null]' } }, { ...valid, tracks: [{ id: 'broken' }] },
-    { ...valid, storage: { unrelated: 'overwrite' } }]) {
+    { ...valid, storage: { unrelated: 'overwrite' } },
+    { ...valid, notes: [{ name: 'NUL.txt', content: '' }] },
+    { ...valid, notes: [{ name: 'A.txt', content: '' }, { name: 'a.txt', content: '' }] },
+    { ...valid, tracks: Array(1001).fill({}) }, { ...valid, storage: { 'marea-duration': 'Infinity' } }]) {
     assert.throws(() => parseBackup(JSON.stringify(invalid)));
   }
 });

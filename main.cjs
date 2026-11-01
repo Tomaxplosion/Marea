@@ -2,9 +2,21 @@ const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
 const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('node:path');
+const { isTrustedURL, validateNotes, MAX_BACKUP_BYTES } = require('./security.cjs');
 const openedNotes = new Map();
+const trustedContents = new Set();
 
-ipcMain.handle('backup:export', async (event, data) => {
+function handle(channel, callback) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!trustedContents.has(event.sender) || event.senderFrame !== event.sender.mainFrame ||
+      !isTrustedURL(event.senderFrame.url, app.isPackaged, __dirname)) {
+      throw new Error('Origen IPC no autorizado.');
+    }
+    return callback(event, ...args);
+  });
+}
+
+handle('backup:export', async (event, data) => {
   const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
     title: 'Exportar copia de Marea', defaultPath: `Marea-${new Date().toISOString().slice(0, 10)}.marea`,
     filters: [{ name: 'Copia de Marea', extensions: ['marea'] }]
@@ -15,33 +27,61 @@ ipcMain.handle('backup:export', async (event, data) => {
   let entries = [];
   try { entries = await fs.readdir(directory, { withFileTypes: true }); }
   catch (error) { if (error.code !== 'ENOENT') throw error; }
+  entries = entries.filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.txt'));
+  if (entries.length > 1000) throw new RangeError('La copia admite hasta 1000 notas.');
+  let noteBytes = 0;
   for (const entry of entries) {
     if (entry.isFile() && entry.name.toLowerCase().endsWith('.txt')) {
-      notes.push({ name: entry.name, content: await fs.readFile(path.join(directory, entry.name), 'utf8') });
+      const notePath = path.join(directory, entry.name);
+      const size = (await fs.stat(notePath)).size;
+      noteBytes += size;
+      if (size > 2_000_000 || noteBytes > 20_000_000) throw new RangeError('Las notas superan el límite de la copia.');
+      notes.push({ name: entry.name, content: await fs.readFile(notePath, 'utf8') });
     }
   }
-  await fs.writeFile(filePath, JSON.stringify({ ...data, notes }), 'utf8');
+  validateNotes(notes);
+  const serialized = JSON.stringify({ ...data, notes });
+  if (Buffer.byteLength(serialized, 'utf8') > MAX_BACKUP_BYTES) throw new RangeError('La copia supera los 256 MB.');
+  await fs.writeFile(filePath, serialized, 'utf8');
   return true;
 });
 
-ipcMain.handle('backup:open', async (event) => {
+handle('backup:open', async (event) => {
   const { canceled, filePaths } = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
     title: 'Importar copia de Marea', properties: ['openFile'],
     filters: [{ name: 'Copia de Marea', extensions: ['marea'] }]
   });
-  return canceled ? null : fs.readFile(filePaths[0], 'utf8');
+  if (canceled) return null;
+  const file = await fs.open(filePaths[0], 'r');
+  try {
+    const stats = await file.stat();
+    if (!stats.isFile() || stats.size > MAX_BACKUP_BYTES) throw new RangeError('La copia supera los 256 MB o no es un archivo.');
+    const buffer = Buffer.alloc(stats.size + 1);
+    let count = 0;
+    while (count < buffer.length) {
+      const { bytesRead } = await file.read(buffer, count, buffer.length - count, null);
+      if (!bytesRead) break;
+      count += bytesRead;
+    }
+    if (count > stats.size) throw new Error('El archivo cambió durante la lectura.');
+    return buffer.subarray(0, count).toString('utf8');
+  } finally { await file.close(); }
 });
 
-ipcMain.handle('backup:notes', async (_event, notes) => {
-  if (!Array.isArray(notes) || notes.some((note) => !note || typeof note.name !== 'string' ||
-    !/^[^<>:"/\\|?*\x00-\x1f]+\.txt$/i.test(note.name) || typeof note.content !== 'string')) {
-    throw new TypeError('Las notas de la copia no son válidas.');
-  }
+handle('backup:notes', async (_event, notes) => {
+  validateNotes(notes);
   const directory = path.join(await findProjectRoot(), 'notas');
   await fs.mkdir(directory, { recursive: true });
   const originals = new Map();
+  let originalBytes = 0;
   for (const note of notes) {
-    try { originals.set(note.name, await fs.readFile(path.join(directory, note.name))); }
+    try {
+      const stats = await fs.lstat(path.join(directory, note.name));
+      if (!stats.isFile() || stats.isSymbolicLink() || stats.size > 2_000_000) throw new Error('Destino de nota no permitido.');
+      originalBytes += stats.size;
+      if (originalBytes > 20_000_000) throw new RangeError('Las notas existentes superan los 20 MB.');
+      originals.set(note.name, await fs.readFile(path.join(directory, note.name)));
+    }
     catch (error) { if (error.code !== 'ENOENT') throw error; originals.set(note.name, null); }
   }
   try {
@@ -85,7 +125,7 @@ async function findProjectRoot() {
   return app.isPackaged ? executableDirectory : app.getAppPath();
 }
 
-ipcMain.handle('notes:open', async (event) => {
+handle('notes:open', async (event) => {
   const projectRoot = await findProjectRoot();
   const notesDirectory = path.join(projectRoot, 'notas');
   let defaultPath = projectRoot;
@@ -119,7 +159,7 @@ ipcMain.handle('notes:open', async (event) => {
   };
 });
 
-ipcMain.handle('notes:save', async (_event, note) => {
+handle('notes:save', async (_event, note) => {
   if (typeof note?.title !== 'string' || typeof note?.content !== 'string') {
     throw new TypeError('La nota debe incluir un nombre y texto.');
   }
@@ -137,19 +177,26 @@ ipcMain.handle('notes:save', async (_event, note) => {
   const originalPath = typeof note.noteId === 'string' ? openedNotes.get(note.noteId) : undefined;
   if (note.noteId && !originalPath) throw new Error('La nota original ya no está abierta.');
   const filePath = originalPath ?? path.join(notesDirectory, `${safeName || 'Nota'}.txt`);
+  if (!originalPath) validateNotes([{ name: path.basename(filePath), content: note.content }]);
 
-  if (!originalPath) await fs.mkdir(notesDirectory, { recursive: true });
+  if (!originalPath) {
+    await fs.mkdir(notesDirectory, { recursive: true });
+    try {
+      const stats = await fs.lstat(filePath);
+      if (!stats.isFile() || stats.isSymbolicLink()) throw new Error('Destino de nota no permitido.');
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   await fs.writeFile(filePath, note.content, 'utf8');
   const noteId = note.noteId ?? randomUUID();
   openedNotes.set(noteId, filePath);
   return { fileName: path.basename(filePath), noteId };
 });
 
-ipcMain.handle('window:is-fullscreen', (event) => {
+handle('window:is-fullscreen', (event) => {
   return BrowserWindow.fromWebContents(event.sender)?.isFullScreen() ?? false;
 });
 
-ipcMain.handle('window:toggle-fullscreen', (event) => {
+handle('window:toggle-fullscreen', (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   if (!window) return false;
   window.setFullScreen(!window.isFullScreen());
@@ -169,9 +216,24 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
       preload: path.join(__dirname, 'preload.cjs')
     }
   });
+
+  const contents = window.webContents;
+  trustedContents.add(contents);
+  contents.once('destroyed', () => trustedContents.delete(contents));
+  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  window.webContents.on('will-navigate', (event, url) => {
+    if (!isTrustedURL(url, app.isPackaged, __dirname)) event.preventDefault();
+  });
+  window.webContents.on('will-redirect', (event, url) => {
+    if (!isTrustedURL(url, app.isPackaged, __dirname)) event.preventDefault();
+  });
+  window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  window.webContents.session.setPermissionCheckHandler(() => false);
 
   window.on('enter-full-screen', () => window.webContents.send('window:fullscreen-changed', true));
   window.on('leave-full-screen', () => window.webContents.send('window:fullscreen-changed', false));

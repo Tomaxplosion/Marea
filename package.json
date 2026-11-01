@@ -1,12 +1,14 @@
 {
   "name": "marea-lofi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Marea",
   "description": "Un espacio tranquilo para concentrarte, organizarte y escuchar lofi.",
   "main": "main.cjs",
   "scripts": {
     "dev": "concurrently -k \"vite --host 127.0.0.1 --strictPort\" \"wait-on http://127.0.0.1:5173 && node scripts/start-electron.cjs\"",
     "start": "npm run dev",
+    "test": "node --test tests/*.test.*",
+    "security:scan": "node scripts/scan-history.cjs",
     "build": "vite build --base=./",
     "dist": "npm run build && electron-builder --win"
   },
@@ -16,11 +18,11 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2",
-    "electron": "^34.0.0",
-    "electron-builder": "^25.1.8",
-    "vite": "^6.0.7",
-    "wait-on": "^8.0.1"
+    "concurrently": "^10.0.6",
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
+    "vite": "^8.3.5",
+    "wait-on": "^9.5.1"
   },
   "build": {
     "appId": "com.marea.lofi",
@@ -32,6 +34,7 @@
     "files": [
       "dist/**/*",
       "main.cjs",
+      "security.cjs",
       "preload.cjs",
       "package.json",
       "assets/**/*"
@@ -60,7 +63,6 @@
     }
   },
   "allowScripts": {
-    "electron@34.5.8": true,
-    "esbuild@0.25.12": true
+    "electron@45.2.1": true
   }
 }

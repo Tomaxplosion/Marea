@@ -56,7 +56,7 @@ El endpoint desplegado es público. Antes de distribuir la app, configura límit
 
 ## Empaquetar para Windows
 
-Descarga el instalador `Marea-Setup-1.0.0.exe` desde [la última versión de GitHub](https://github.com/Tomaxplosion/Marea/releases/latest). No hace falta instalar Node.js: ejecuta el setup y sigue el asistente. Crea accesos directos con el icono de Marea en el escritorio y en Inicio.
+Descarga el instalador `Marea-Setup-1.0.1.exe` desde [la última versión de GitHub](https://github.com/Tomaxplosion/Marea/releases/latest). No hace falta instalar Node.js: ejecuta el setup y sigue el asistente. Crea accesos directos con el icono de Marea en el escritorio y en Inicio.
 
 Las notas de la versión instalada se guardan en la carpeta de datos del usuario (`%APPDATA%/marea-lofi/notas`). Usa una copia `.marea` para llevar tus datos de desarrollo a la versión instalada o a otro ordenador.
 
@@ -71,3 +71,7 @@ npm.cmd run dist
 El instalador y la versión portátil se generan en `release/`.
 
 El workflow `.github/workflows/release.yml` compila y publica los instaladores cuando se sube una etiqueta `v` seguida de la versión de `package.json` (por ejemplo, `v1.0.0`). También puede ejecutarse manualmente para obtener los ejecutables como artefactos de Actions sin publicar una versión.
+
+## Seguridad
+
+Consulta [SECURITY.md](SECURITY.md) para los límites del Worker, las protecciones de Electron, los avisos pendientes de las herramientas y las propuestas de cifrado y formato de copias. Las copias admiten hasta 128 MiB de audio total y 64 MiB por pista; no están cifradas.
