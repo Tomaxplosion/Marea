@@ -317,7 +317,17 @@ function App() {
             if (event.data === youtubeApi.PlayerState.PLAYING) setIsPlaying(true);
             if (event.data === youtubeApi.PlayerState.PAUSED) setIsPlaying(false);
           },
-          onError: () => setLibraryError('No se pudo reproducir este vídeo de YouTube.')
+          onError: (event) => {
+            if (!active) return;
+            setIsPlaying(false);
+            const messages = {
+              153: 'YouTube no pudo identificar la aplicación. Actualiza Marea a la última versión.',
+              100: 'Este vídeo ya no está disponible en YouTube.',
+              101: 'El autor no permite reproducir este vídeo fuera de YouTube.',
+              150: 'El autor no permite reproducir este vídeo fuera de YouTube.'
+            };
+            setLibraryError(messages[event.data] || `No se pudo reproducir este vídeo de YouTube (error ${event.data}).`);
+          }
         }
       });
     }).catch(() => {

@@ -28,6 +28,8 @@ Electron y las herramientas se han actualizado. `npm audit --audit-level=high` s
 
 El workflow fija las acciones oficiales por SHA, no conserva credenciales de checkout y separa el empaquetado (solo lectura) de la publicación (escritura). El escáner revisa patrones de secretos y correos personales del historial sin imprimir valores. No sustituye una revisión humana ni garantiza detectar secretos de cualquier formato.
 
+Desde 1.0.2, las peticiones de subframe a los endpoints HTTPS `/embed/` de YouTube añaden la identificación pública `https://com.marea.lofi/` cuando no existe un Referer HTTP(S). Solo se aplica a ventanas de Marea; no se modifican otras peticiones ni se envían rutas locales. Esto satisface la identificación del cliente del reproductor sin relajar CSP, aislamiento o validación IPC.
+
 Los instaladores anteriores no reciben estas defensas automáticamente. Instala la versión 1.0.1 o posterior. Los binarios aún no están firmados digitalmente.
 
 ## Historial y privacidad

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { isTrustedURL, validateNotes } = require('../security.cjs');
+const { isTrustedURL, validateNotes, youtubeEmbedHeaders, YOUTUBE_APP_REFERRER } = require('../security.cjs');
 
 test('IPC permits only the exact application document', () => {
   const root = path.resolve(__dirname, '..');
@@ -22,4 +22,19 @@ test('note import rejects path escapes, reserved devices, case collisions and ov
     assert.throws(() => validateNotes(notes));
   }
   assert.doesNotThrow(() => validateNotes([{ name: 'Idea.txt', content: 'Texto' }]));
+});
+
+test('YouTube embeds identify the app without changing unrelated requests or existing HTTP referrers', () => {
+  const details = { url: 'https://www.youtube.com/embed/M7lc1UVf-VE', resourceType: 'subFrame', requestHeaders: { Accept: '*/*' } };
+  assert.equal(new URL(YOUTUBE_APP_REFERRER).hostname, require('../package.json').build.appId);
+  assert.equal(youtubeEmbedHeaders(details, true).Referer, YOUTUBE_APP_REFERRER);
+  assert.equal(youtubeEmbedHeaders({ ...details, requestHeaders: { referer: 'file:///private/path/index.html' } }, true).Referer, YOUTUBE_APP_REFERRER);
+  assert.deepEqual(youtubeEmbedHeaders(details, false), details.requestHeaders);
+  for (const url of ['https://evil.example/embed/id', 'https://www.youtube.com.evil.example/embed/id',
+    'https://www.youtube.com/watch?v=id', 'http://www.youtube.com/embed/id']) {
+    assert.deepEqual(youtubeEmbedHeaders({ ...details, url }, true), details.requestHeaders);
+  }
+  const existing = { rEfErEr: 'https://www.youtube.com/' };
+  assert.deepEqual(youtubeEmbedHeaders({ ...details, requestHeaders: existing }, true), existing);
+  assert.deepEqual(youtubeEmbedHeaders({ ...details, resourceType: 'xhr' }, true), details.requestHeaders);
 });

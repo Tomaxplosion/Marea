@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
 const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
 const path = require('node:path');
-const { isTrustedURL, validateNotes, MAX_BACKUP_BYTES } = require('./security.cjs');
+const { isTrustedURL, validateNotes, youtubeEmbedHeaders, MAX_BACKUP_BYTES } = require('./security.cjs');
 const openedNotes = new Map();
 const trustedContents = new Set();
 
@@ -225,6 +225,12 @@ function createWindow() {
   const contents = window.webContents;
   trustedContents.add(contents);
   contents.once('destroyed', () => trustedContents.delete(contents));
+  contents.session.webRequest.onBeforeSendHeaders({ urls: [
+    'https://www.youtube.com/embed/*', 'https://www.youtube-nocookie.com/embed/*'
+  ] }, (details, callback) => {
+    const trustedWindow = [...trustedContents].some((entry) => entry.id === details.webContentsId);
+    callback({ requestHeaders: youtubeEmbedHeaders(details, trustedWindow) });
+  });
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event, url) => {
     if (!isTrustedURL(url, app.isPackaged, __dirname)) event.preventDefault();

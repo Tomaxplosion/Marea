@@ -26,4 +26,22 @@ function validateNotes(notes) {
   }
 }
 
-module.exports = { isTrustedURL, validateNotes, MAX_BACKUP_BYTES: 256 * 1024 * 1024 };
+const YOUTUBE_APP_REFERRER = 'https://com.marea.lofi/';
+
+function youtubeEmbedHeaders(details, trustedWindow) {
+  const headers = { ...details.requestHeaders };
+  if (!trustedWindow || details.resourceType !== 'subFrame') return headers;
+  try {
+    const url = new URL(details.url);
+    if (url.protocol !== 'https:' || !['www.youtube.com', 'www.youtube-nocookie.com'].includes(url.hostname) ||
+      !url.pathname.startsWith('/embed/')) return headers;
+    const referrerKeys = Object.keys(headers).filter((key) => key.toLowerCase() === 'referer');
+    // Preserve a browser-provided HTTP(S) referrer, including YouTube's own requests.
+    if (referrerKeys.some((key) => /^https?:\/\//i.test(headers[key]))) return headers;
+    referrerKeys.forEach((key) => delete headers[key]);
+    headers.Referer = YOUTUBE_APP_REFERRER;
+  } catch {}
+  return headers;
+}
+
+module.exports = { isTrustedURL, validateNotes, youtubeEmbedHeaders, YOUTUBE_APP_REFERRER, MAX_BACKUP_BYTES: 256 * 1024 * 1024 };
