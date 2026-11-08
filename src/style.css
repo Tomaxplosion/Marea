@@ -1101,3 +1101,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .app-shell .theme-setting,
   .app-shell .mood-setting { grid-column: 2; }
 }
+
+.library-notice { position: fixed; right: 24px; bottom: 104px; z-index: 40; display: flex; align-items: center; gap: 9px; max-width: min(360px, calc(100vw - 32px)); padding: 12px 16px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: var(--mood-surface, var(--paper)); box-shadow: 0 6px 24px rgba(0, 0, 0, .12); font-size: 12px; line-height: 1.5; pointer-events: none; }
+.library-notice:empty { display: none; }
+.library-notice svg { flex-shrink: 0; color: var(--mood-accent, var(--green)); }
+@media (max-width: 600px) { .library-notice { right: 16px; bottom: 94px; } }

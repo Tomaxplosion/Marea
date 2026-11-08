@@ -96,6 +96,7 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(() => readSession().volume ?? 70);
   const [libraryError, setLibraryError] = useState('');
+  const [libraryNotice, setLibraryNotice] = useState(null);
   const [youtubeExpanded, setYoutubeExpanded] = useState(false);
   const [youtubeSearch, setYoutubeSearch] = useState('lofi study');
   const [youtubeResults, setYoutubeResults] = useState([]);
@@ -113,6 +114,32 @@ function App() {
   const fileInputRef = useRef(null);
   const noteFileInputRef = useRef(null);
   const autoPlaySelectedTrack = useRef(false);
+  const drawerPanelRef = useRef(null);
+  const drawerToggleRef = useRef(null);
+
+  useEffect(() => {
+    if (!libraryNotice) return;
+    const timeout = window.setTimeout(() => setLibraryNotice(null), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [libraryNotice]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const closeOutside = (event) => {
+      if (!drawerPanelRef.current?.contains(event.target) && !drawerToggleRef.current?.contains(event.target)) {
+        setDrawerOpen(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOutside, true);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside, true);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [drawerOpen]);
 
   useEffect(() => {
     localStorage.setItem('marea-session', JSON.stringify({ view, noteTitle, noteContent, seconds, volume }));
@@ -679,7 +706,9 @@ function App() {
       setLibrary((current) => [...current, ...additions]);
       setLibraryStatus('ready');
       setLibraryError('');
-      setDrawerOpen(true);
+      setLibraryNotice({ message: additions.length === 1 ? 'Canción añadida a tu biblioteca.'
+        : additions.length > 1 ? `${additions.length} canciones añadidas a tu biblioteca.`
+        : 'Estas canciones ya están en tu biblioteca.' });
     } catch {
       setLibraryError('No se pudieron guardar las canciones en este equipo.');
     }
@@ -763,7 +792,8 @@ function App() {
     setCurrentTime(0);
     setTrackDuration(0);
     setLibraryError('');
-    setDrawerOpen(true);
+    setLibraryNotice({ message: library.some((item) => item.id === track.id)
+      ? 'Esta canción ya está en tu biblioteca.' : 'Canción añadida a tu biblioteca.' });
     setYoutubeError('');
   }
 
@@ -1123,10 +1153,10 @@ function App() {
               </section>
 
               <aside className={`track-drawer${drawerOpen ? ' is-open' : ''}`}>
-                <button className="track-drawer-toggle" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen} aria-label={drawerOpen ? 'Cerrar lista de canciones' : 'Abrir lista de canciones'} title="Lista de canciones">
+                <button ref={drawerToggleRef} className="track-drawer-toggle" onClick={() => setDrawerOpen((open) => !open)} aria-expanded={drawerOpen} aria-label={drawerOpen ? 'Cerrar lista de canciones' : 'Abrir lista de canciones'} title="Lista de canciones">
                   <span>LISTA</span><ChevronLeft size={19} />
                 </button>
-                  <section className="track-drawer-panel" aria-labelledby="library-title">
+                  <section ref={drawerPanelRef} className="track-drawer-panel" aria-labelledby="library-title">
                     <div className="track-drawer-header">
                       <div>
                         <div className="eyebrow">{drawerSection === 'tracks' ? 'MI MÚSICA' : 'COLECCIONES'}</div>
@@ -1291,6 +1321,9 @@ function App() {
         )}
         {libraryError && <div className="radio-error" role="status">{libraryError}</div>}
       </footer>
+      <div className="library-notice" role="status" aria-live="polite" aria-atomic="true">
+        {libraryNotice && <><Check size={17} aria-hidden="true" /><span>{libraryNotice.message}</span></>}
+      </div>
     </div>
   );
 }
