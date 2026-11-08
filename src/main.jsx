@@ -34,6 +34,9 @@ import {
 } from 'lucide-react';
 import './style.css';
 import Calendar from './components/Calendar.jsx';
+import RecordArtwork from './components/RecordArtwork.jsx';
+import KoiPattern from './components/KoiPattern.jsx';
+import { getVideoPalette } from './lib/immersion.mjs';
 import { createBackup, parseBackup, restoreBackup, readSession } from './lib/backup.mjs';
 import SleepingAnimal from './components/SleepingAnimal.jsx';
 import { defaultTasks, MAX_DURATION_MINUTES, readTasks, formatPlaybackTime, formatTimerTime, formatCompactTimerTime } from './lib/time.js';
@@ -65,6 +68,9 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('marea-theme') === 'dark' ? 'dark' : 'light');
   const [isPetVisible, setIsPetVisible] = useState(() => localStorage.getItem('marea-pet-visible') !== 'false');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [immersion, setImmersion] = useState(() => localStorage.getItem('marea-immersion') === 'true');
+  const [immersionPalette, setImmersionPalette] = useState(null);
+  const [immersionStatus, setImmersionStatus] = useState('waiting');
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupStatus, setBackupStatus] = useState('');
   const [mood, setMood] = useState(() => {
@@ -265,6 +271,41 @@ function App() {
   const completedCount = tasks.filter((task) => task.done).length;
   const remainingTasks = tasks.length - completedCount;
   const currentTrack = library[selectedTrack];
+  useEffect(() => {
+    localStorage.setItem('marea-immersion', String(immersion));
+  }, [immersion]);
+
+  useEffect(() => {
+    let active = true;
+    if (!immersion || currentTrack?.source !== 'youtube' || !currentTrack.youtubeId) {
+      setImmersionPalette(null);
+      setImmersionStatus(currentTrack ? 'local' : 'waiting');
+      return;
+    }
+    setImmersionPalette(null);
+    setImmersionStatus('loading');
+    getVideoPalette(currentTrack.youtubeId).then((palette) => {
+      if (!active) return;
+      setImmersionPalette(palette);
+      setImmersionStatus('ready');
+    }).catch(() => {
+      if (!active) return;
+      setImmersionPalette(null);
+      setImmersionStatus('unavailable');
+    });
+    return () => { active = false; };
+  }, [immersion, currentTrack?.source, currentTrack?.youtubeId]);
+
+  const activePalette = immersion ? immersionPalette : null;
+  const displayTheme = activePalette?.theme || theme;
+  const displayMood = activePalette ? 'immersion' : mood === 'marea' ? undefined : mood;
+  const immersionMessage = !immersion ? 'Colores de la miniatura del vídeo'
+    : immersionStatus === 'ready' ? 'Paleta del vídeo activa'
+    : immersionStatus === 'loading' ? 'Buscando los tonos del vídeo…'
+    : immersionStatus === 'local' ? 'Audio local: sin imagen de referencia'
+    : immersionStatus === 'unavailable' ? 'Miniatura no disponible; tema habitual'
+    : 'Elige una canción de YouTube';
+
   const selectedPlaylist = playlists.find((playlist) => playlist.id === selectedPlaylistId);
   const selectedPlaylistTracks = selectedPlaylist
     ? selectedPlaylist.trackIds.map((trackId) => library.find((track) => track.id === trackId)).filter(Boolean)
@@ -861,7 +902,7 @@ function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme} data-mood={mood === 'marea' ? undefined : mood} data-ambience={mood}>
+    <div className="app-shell" data-theme={displayTheme} data-mood={displayMood} data-ambience={mood} data-immersion={immersion || undefined} style={activePalette?.variables}>
       <aside className="sidebar">
         <a className="brand" href="#inicio" aria-label="Marea, inicio">
           <span className="brand-mark"><Waves size={20} strokeWidth={2.1} /></span>
@@ -889,19 +930,19 @@ function App() {
           </button>
 
           {settingsOpen && <div className="settings-content" id="settings-content">
-            <label className="theme-setting">
-              <span className="theme-setting-icon">{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
-              <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{theme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
-              <input className="theme-checkbox" type="checkbox" checked={theme === 'dark'} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
+            <label className={`theme-setting${immersion ? ' setting-locked' : ''}`}>
+              <span className="theme-setting-icon">{displayTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}</span>
+              <span className="theme-setting-copy"><strong>Modo oscuro</strong><small>{displayTheme === 'dark' ? 'Activado' : 'Desactivado'}</small></span>
+              <input className="theme-checkbox" type="checkbox" checked={displayTheme === 'dark'} disabled={immersion} aria-describedby={immersion ? 'immersion-status' : undefined} onChange={(event) => setTheme(event.target.checked ? 'dark' : 'light')} aria-label="Modo oscuro" />
               <span className="theme-switch" aria-hidden="true"><span /></span>
             </label>
 
-            <div className="mood-setting mood-setting-dropdown" aria-label="Estilo visual">
+            <div className={`mood-setting mood-setting-dropdown${immersion ? ' setting-locked' : ''}`} aria-label="Estilo visual">
               <div className="mood-setting-head">
                 <span className="theme-setting-icon"><Sun size={16} /></span>
                 <label className="theme-setting-copy" htmlFor="mood-select"><strong>Ambiente</strong></label>
               </div>
-              <select id="mood-select" className="mood-select" value={mood} onChange={(event) => setMood(event.target.value)}>
+              <select id="mood-select" className="mood-select" value={mood} disabled={immersion} aria-describedby={immersion ? 'immersion-status' : undefined} onChange={(event) => setMood(event.target.value)}>
                 {moodOptions.map((option) => (
                   <option key={option.id} value={option.id}>{option.label}</option>
                 ))}
@@ -919,6 +960,13 @@ function App() {
               <span className="theme-setting-icon">{isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</span>
               <span className="theme-setting-copy"><strong>Pantalla completa</strong><small>{isFullscreen ? 'Activada' : 'Desactivada'}</small></span>
               <input className="theme-checkbox" type="checkbox" checked={isFullscreen} onChange={toggleFullscreen} aria-label="Pantalla completa" />
+              <span className="theme-switch" aria-hidden="true"><span /></span>
+            </label>
+
+            <label className="theme-setting immersion-setting">
+              <span className="theme-setting-icon"><Waves size={16} /></span>
+              <span className="theme-setting-copy"><strong>Inmersión</strong><small id="immersion-status" role="status">{immersionMessage}</small></span>
+              <input className="theme-checkbox" type="checkbox" checked={immersion} onChange={(event) => setImmersion(event.target.checked)} aria-label="Inmersión" />
               <span className="theme-switch" aria-hidden="true"><span /></span>
             </label>
           </div>}
@@ -1083,7 +1131,7 @@ function App() {
             }} onDrop={handleDropFiles}>
               <section className={`now-playing-panel${dropActive ? ' dropzone-active' : ''}`} aria-label="Reproductor de música">
                 <div className="now-playing-top"><span className="live-indicator"><span /> {isPlaying ? 'REPRODUCIENDO' : 'TU BIBLIOTECA'}</span><Music2 size={17} /></div>
-                <div className="radio-record"><span className="record-disc"><span /></span></div>
+                <RecordArtwork trackId={currentTrack?.id} />
                 <div className="now-playing-station">{currentTrack ? currentTrack.artist : 'MÚSICA LOCAL'} <span>·</span> {currentTrack ? 'Tu biblioteca' : 'Biblioteca'}</div>
                 <h2>{currentTrack?.title ?? (libraryStatus === 'loading' ? 'Cargando tu música…' : 'Aún no hay canciones')}</h2>
                 <p className="now-playing-artist">{currentTrack ? currentTrack.artist : 'Añade archivos de audio para empezar'}</p>
@@ -1110,6 +1158,7 @@ function App() {
               </section>
 
               <section className="rapid-search-panel" aria-label="Búsqueda de música lofi en YouTube Data API">
+                <KoiPattern />
                 <div className="rapid-search-header">
                   <div>
                     <div className="eyebrow">LOFI DISCOVERY</div>

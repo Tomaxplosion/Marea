@@ -77,3 +77,9 @@ El workflow `.github/workflows/release.yml` compila y publica los instaladores c
 ## Seguridad
 
 Consulta [SECURITY.md](SECURITY.md) para los límites del Worker, las protecciones de Electron, los avisos pendientes de las herramientas y las propuestas de cifrado y formato de copias. Las copias admiten hasta 128 MiB de audio total y 64 MiB por pista; no están cifradas.
+
+## Inmersión
+
+En Ajustes, activa **Inmersión** para adaptar la interfaz a los tonos de la miniatura de la canción de YouTube seleccionada. La paleta se actualiza al cambiar de pista; no se capturan los fotogramas del reproductor. Durante este modo, Ambiente y Modo oscuro quedan bloqueados. Al desactivarlo se recuperan tus preferencias anteriores.
+
+Con audio local o si no se puede obtener la miniatura, se mantiene el tema habitual. La opción se guarda entre sesiones y se incluye en las copias portátiles.

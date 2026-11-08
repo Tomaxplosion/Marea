@@ -1,6 +1,6 @@
 const fs = require('node:fs/promises');
 const { randomUUID } = require('node:crypto');
-const { app, BrowserWindow, dialog, Menu, ipcMain } = require('electron');
+const { app, BrowserWindow, dialog, Menu, ipcMain, nativeImage } = require('electron');
 const path = require('node:path');
 const { isTrustedURL, validateNotes, youtubeEmbedHeaders, MAX_BACKUP_BYTES } = require('./security.cjs');
 const openedNotes = new Map();
@@ -15,6 +15,41 @@ function handle(channel, callback) {
     return callback(event, ...args);
   });
 }
+
+const thumbnailCache = new Map();
+const thumbnailPending = new Map();
+handle('music:thumbnail', async (_event, videoId) => {
+  if (typeof videoId !== 'string' || !/^[A-Za-z0-9_-]{11}$/.test(videoId)) throw new TypeError('Invalid video ID.');
+  if (thumbnailCache.has(videoId)) return thumbnailCache.get(videoId);
+  if (thumbnailPending.has(videoId)) return thumbnailPending.get(videoId);
+  if (thumbnailPending.size >= 4) throw new Error('Too many thumbnail requests.');
+  const task = (async () => {
+    const response = await fetch(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, {
+      signal: AbortSignal.timeout(8000), redirect: 'error'
+    });
+    if (!response.ok || !/^image\/(jpeg|png)/i.test(response.headers.get('content-type') || '')) throw new Error('Thumbnail unavailable.');
+    const reader = response.body.getReader();
+    const chunks = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 2 * 1024 * 1024) { await reader.cancel(); throw new Error('Thumbnail too large.'); }
+        chunks.push(Buffer.from(value));
+      }
+    } finally { reader.releaseLock(); }
+    const image = nativeImage.createFromBuffer(Buffer.concat(chunks));
+    if (image.isEmpty()) throw new Error('Invalid thumbnail.');
+    const data = image.resize({ width: 64, height: 36, quality: 'good' }).toDataURL();
+    thumbnailCache.set(videoId, data);
+    if (thumbnailCache.size > 32) thumbnailCache.delete(thumbnailCache.keys().next().value);
+    return data;
+  })();
+  thumbnailPending.set(videoId, task);
+  try { return await task; } finally { thumbnailPending.delete(videoId); }
+});
 
 handle('backup:export', async (event, data) => {
   const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {

@@ -1,7 +1,7 @@
 import { openTrackDatabase, readSavedTracks, TRACK_STORE } from './music.js';
 
 export const BACKUP_KEYS = ['marea-tasks', 'marea-duration', 'marea-theme', 'marea-pet-visible',
-  'marea-mood', 'marea-playlists', 'marea-youtube-tracks', 'marea-calendar-events', 'marea-session'];
+  'marea-mood', 'marea-immersion', 'marea-playlists', 'marea-youtube-tracks', 'marea-calendar-events', 'marea-session'];
 const MAX_AUDIO_BYTES = 128 * 1024 * 1024;
 const MAX_TRACK_BYTES = 64 * 1024 * 1024;
 const MAX_FILE_CHARS = 256 * 1024 * 1024;
@@ -69,6 +69,7 @@ export function parseBackup(text) {
   if (data.storage['marea-theme'] !== undefined && !['light', 'dark'].includes(data.storage['marea-theme'])) throw new Error('Tema no válido.');
   if (data.storage['marea-pet-visible'] !== undefined && !['true', 'false'].includes(data.storage['marea-pet-visible'])) throw new Error('Mascota no válida.');
   if (data.storage['marea-mood'] !== undefined && !['marea', 'night', 'sunrise', 'forest', 'minimal', 'neon'].includes(data.storage['marea-mood'])) throw new Error('Ambiente no válido.');
+  if (data.storage['marea-immersion'] !== undefined && !['true', 'false'].includes(data.storage['marea-immersion'])) throw new Error('Invalid immersion setting.');
   const tasks = JSON.parse(data.storage['marea-tasks'] || '[]');
   if (tasks.some((task) => !task || !['string', 'number'].includes(typeof task.id) ||
     typeof task.text !== 'string' || typeof task.done !== 'boolean')) throw new Error('Tareas no válidas.');

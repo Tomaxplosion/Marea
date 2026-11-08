@@ -1106,3 +1106,40 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .library-notice:empty { display: none; }
 .library-notice svg { flex-shrink: 0; color: var(--mood-accent, var(--green)); }
 @media (max-width: 600px) { .library-notice { right: 16px; bottom: 94px; } }
+
+.radio-record.record-swap { border: 0; background: transparent; }
+.record-swap-frame { position: absolute; inset: 0; }
+.radio-record-layer { position: absolute; inset: 0; display: grid; place-items: center; border: 1px solid rgba(238, 234, 207, .18); border-radius: 50%; background: rgba(250, 240, 203, .045); }
+.record-leaving { animation: record-slide-out .45s cubic-bezier(.4, 0, .6, 1) both; }
+.record-arriving { animation: record-slide-in .65s cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes record-slide-out {
+  from { opacity: 1; transform: translateX(0) rotate(0) scale(1); }
+  to { opacity: 0; transform: translateX(-190%) rotate(-18deg) scale(.92); }
+}
+@keyframes record-slide-in {
+  0% { opacity: 0; transform: translateX(190%) rotate(22deg) scale(.92); }
+  20% { opacity: 0; }
+  100% { opacity: 1; transform: translateX(0) rotate(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .record-leaving { display: none; animation: none; }
+  .record-arriving { animation: none; }
+}
+
+.rapid-search-panel { position: relative; isolation: isolate; }
+.rapid-search-panel > :not(.koi-pattern) { position: relative; z-index: 1; }
+.koi-pattern { position: absolute; inset: 70px 0 0; width: 100%; height: calc(100% - 70px); color: var(--mood-accent, var(--green)); opacity: .16; pointer-events: none; user-select: none; }
+.koi-body { fill: var(--mood-surface-alt, #f4eddf); }
+.koi-fin { fill: var(--mood-surface-alt, #f4eddf); fill-opacity: .5; }
+.koi-patch { fill: var(--coral); fill-opacity: .85; }
+.app-shell[data-theme='dark'] .koi-pattern { opacity: .2; }
+
+.setting-locked { opacity: .48; }
+.setting-locked, .setting-locked input, .setting-locked select { cursor: not-allowed; }
+.immersion-setting { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.immersion-setting .theme-setting-copy { min-width: 0; }
+.immersion-setting .theme-setting-copy small { white-space: normal; line-height: 1.45; }
+.app-shell[data-immersion='true'] :is(.sidebar, .player-bar, .focus-panel, .now-playing-panel, .tasks-panel, .rapid-search-panel, .track-drawer-panel, .notes-editor, .nav-item, .theme-setting, .mood-setting, button, input, select) { transition: background-color .65s ease, border-color .65s ease, color .4s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .app-shell[data-immersion='true'], .app-shell[data-immersion='true'] * { transition-duration: 0s !important; }
+}

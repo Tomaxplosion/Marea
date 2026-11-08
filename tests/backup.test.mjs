@@ -35,6 +35,7 @@ test('portable backup preserves audio bytes and settings and replaces destinatio
   tracks = [{ id: 'song', title: 'Canción', artist: 'Artista', file: new File([bytes], 'song.mp3', { type: 'audio/mpeg' }) }];
   storage.set('marea-tasks', JSON.stringify([{ id: 1, text: 'Estudiar', done: false }]));
   storage.set('unrelated', 'keep');
+  storage.set('marea-immersion', 'true');
   const backup = await createBackup({ view: 'notes', noteTitle: 'Idea', noteContent: 'Texto', seconds: 123, volume: 42 });
   const parsed = parseBackup(JSON.stringify({ ...backup, notes: [{ name: 'Idea.txt', content: 'Texto' }] }));
   tracks = [{ id: 'old' }];
@@ -44,6 +45,7 @@ test('portable backup preserves audio bytes and settings and replaces destinatio
   assert.equal(tracks[0].file.name, 'song.mp3');
   assert.equal(storage.has('marea-theme'), false);
   assert.equal(storage.get('unrelated'), 'keep');
+  assert.equal(storage.get('marea-immersion'), 'true');
   assert.equal(JSON.parse(storage.get('marea-session')).seconds, 123);
 });
 
@@ -52,6 +54,7 @@ test('rejects incompatible and malformed copies before restore', () => {
   for (const invalid of [{ ...valid, version: 2 }, { ...valid, notes: [{ name: '../escape.txt', content: '' }] },
     { ...valid, storage: { 'marea-tasks': '[null]' } }, { ...valid, tracks: [{ id: 'broken' }] },
     { ...valid, storage: { unrelated: 'overwrite' } },
+    { ...valid, storage: { 'marea-immersion': 'invalid' } },
     { ...valid, notes: [{ name: 'NUL.txt', content: '' }] },
     { ...valid, notes: [{ name: 'A.txt', content: '' }, { name: 'a.txt', content: '' }] },
     { ...valid, tracks: Array(1001).fill({}) }, { ...valid, storage: { 'marea-duration': 'Infinity' } }]) {
